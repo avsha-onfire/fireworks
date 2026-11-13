@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { gtmWorkspaceStore } from '~/lib/stores/gtmWorkspace';
 import type { ProviderInfo } from '~/types/model';
 import { createScopedLogger } from '~/utils/logger';
 
@@ -27,6 +28,7 @@ export function usePromptEnhancer() {
       message: input,
       model,
       provider,
+      gtmContext: gtmWorkspaceStore.get(),
     };
 
     if (apiKeys) {

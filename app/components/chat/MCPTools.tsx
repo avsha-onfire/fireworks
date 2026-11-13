@@ -88,7 +88,7 @@ export function McpTools({ open, onOpenChange }: McpToolsProps) {
                 ) : (
                   <div className="py-4 text-center text-bolt-elements-textSecondary">
                     <p>No MCP servers configured</p>
-                    <p className="text-xs mt-1">Configure servers in Settings → MCP Servers</p>
+                    <p className="text-xs mt-1">Configure servers in Settings → Data connectors (MCP)</p>
                   </div>
                 )}
               </div>

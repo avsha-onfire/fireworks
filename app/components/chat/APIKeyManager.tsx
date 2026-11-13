@@ -1,6 +1,7 @@
 import Cookies from 'js-cookie';
 import React, { useState, useEffect, useCallback } from 'react';
 import { IconButton } from '~/components/ui/IconButton';
+import { providerDisplayName } from '~/lib/brand';
 import type { ProviderInfo } from '~/types/model';
 
 interface APIKeyManagerProps {
@@ -90,7 +91,9 @@ export const APIKeyManager: React.FC<APIKeyManagerProps> = ({ provider, apiKey, 
     <div className="flex items-center justify-between py-3 px-1">
       <div className="flex items-center gap-2 flex-1">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-bolt-elements-textSecondary">{provider?.name} API Key:</span>
+          <span className="text-sm font-medium text-bolt-elements-textSecondary">
+            {providerDisplayName(provider.name)} API Key:
+          </span>
           {!isEditing && (
             <div className="flex items-center gap-2">
               {apiKey ? (

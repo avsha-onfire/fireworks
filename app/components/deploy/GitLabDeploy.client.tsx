@@ -2,6 +2,7 @@ import { useStore } from '@nanostores/react';
 import { useState } from 'react';
 import { toast } from 'react-toastify';
 import { formatBuildFailureOutput } from './deployUtils';
+import { BRAND } from '~/lib/brand';
 import { getLocalStorage } from '~/lib/persistence/localStorage';
 import { chatId } from '~/lib/persistence/useChatHistory';
 import type { ActionCallbackData } from '~/lib/runtime/message-parser';
@@ -155,7 +156,7 @@ export function useGitLabDeploy() {
       return {
         success: true,
         files: fileContents,
-        projectName: artifact.title || 'bolt-project',
+        projectName: artifact.title || `${BRAND.fileSlug}-project`,
       };
     } catch (err) {
       console.error('GitLab deploy error:', err);

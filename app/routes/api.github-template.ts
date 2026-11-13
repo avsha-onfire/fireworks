@@ -83,6 +83,10 @@ async function fetchRepoContentsCloudflare(repo: string, githubToken?: string) {
 
   const treeData = (await treeResponse.json()) as any;
 
+  if (treeData.truncated) {
+    throw new Error(`Repository tree for ${repo} is too large to list completely`);
+  }
+
   // Filter for files only (not directories) and limit size
   const files = treeData.tree.filter((item: any) => {
     if (item.type !== 'blob') {
@@ -125,8 +129,7 @@ async function fetchRepoContentsCloudflare(repo: string, githubToken?: string) {
         });
 
         if (!contentResponse.ok) {
-          console.warn(`Failed to fetch ${file.path}: ${contentResponse.status}`);
-          return null;
+          throw new Error(`HTTP ${contentResponse.status}`);
         }
 
         const contentData = (await contentResponse.json()) as any;
@@ -144,8 +147,12 @@ async function fetchRepoContentsCloudflare(repo: string, githubToken?: string) {
           content,
         };
       } catch (error) {
-        console.warn(`Error fetching ${file.path}:`, error);
-        return null;
+        /*
+         * A template with missing files cannot boot, and a rate limit cuts off
+         * the end of the listing (vite.config.ts, src/main.tsx), so one failed
+         * file fails the whole listing instead of being skipped.
+         */
+        throw new Error(`Failed to fetch ${file.path}: ${error instanceof Error ? error.message : String(error)}`);
       }
     });
 
@@ -307,14 +314,17 @@ export async function loader({ request, context }: { request: Request; context: 
     let fileList;
 
     if (isCloudflareEnvironment(context)) {
+      /*
+       * One archive download instead of one Contents API request per file: GitHub
+       * allows an unauthenticated caller 60 API requests an hour, fewer than a
+       * typical template has files.
+       */
       try {
-        fileList = await fetchRepoContentsCloudflare(repo, githubToken);
-      } catch (error) {
-        if (!(error instanceof Error) || !error.message.includes('GitHub API rate limit exceeded')) {
-          throw error;
-        }
-
         fileList = await fetchRepoContentsBranchArchive(repo);
+      } catch (error) {
+        console.warn(`Branch archive unavailable for ${repo}, falling back to the GitHub Contents API:`, error);
+
+        fileList = await fetchRepoContentsCloudflare(repo, githubToken);
       }
     } else {
       fileList = await fetchRepoContentsZip(repo, githubToken);

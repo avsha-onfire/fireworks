@@ -11,6 +11,7 @@ import type { ElementInfo } from '~/components/workbench/Inspector';
 import { API_KEYS_UPDATED_EVENT, type ApiKeysUpdatedDetail } from '~/lib/api/apiKeys';
 import { isServerAgentTool } from '~/lib/common/agentLoop';
 import { STARTER_BUILD_FLAG } from '~/lib/common/starterBuild';
+import { hasDataFileSummary } from '~/lib/gtm/data-file-block';
 import { useMessageParser, usePromptEnhancer, useShortcuts } from '~/lib/hooks';
 import { useSettings } from '~/lib/hooks/useSettings';
 import { description, useChatHistory } from '~/lib/persistence';
@@ -31,6 +32,7 @@ import type { PluginManifest } from '~/lib/plugins/schema';
 import { pluginManifestSchema } from '~/lib/plugins/schema';
 import { callProjectMcpTool, PROJECT_TOOL_NAMES } from '~/lib/runtime/projectMcp';
 import { chatStore } from '~/lib/stores/chat';
+import { gtmWorkspaceStore } from '~/lib/stores/gtmWorkspace';
 import { logStore } from '~/lib/stores/logs';
 import { useMCPStore } from '~/lib/stores/mcp';
 import { usePluginStore } from '~/lib/stores/plugins';
@@ -264,7 +266,7 @@ export const ChatImpl = memo(
          * server received no chatMode at all and answered with discussPrompt()
          * instead of the build prompt, so no artifacts were ever produced.
          */
-        body: () => bodyRef.current,
+        body: () => ({ ...bodyRef.current, gtmContext: gtmWorkspaceStore.get() }),
       }),
 
       /*
@@ -635,7 +637,7 @@ export const ChatImpl = memo(
     const { parsedMessages, parseMessages, resetParsedMessages } = useMessageParser();
     pendingTemplateParserRef.current = parseMessages;
 
-    const TEXTAREA_MAX_HEIGHT = chatStarted ? 400 : 200;
+    const TEXTAREA_MAX_HEIGHT = chatStarted ? 400 : 280;
 
     useEffect(() => {
       const sameChatRefresh = shouldPreserveChatMessagesOnRefresh({
@@ -1100,6 +1102,13 @@ export const ChatImpl = memo(
     const debouncedCachePrompt = useCallback(
       debounce((event: React.ChangeEvent<HTMLTextAreaElement>) => {
         const trimmedValue = event.target.value.trim();
+
+        // File-derived sample values and long blueprint prompts must not end up in a cookie.
+        if (hasDataFileSummary(trimmedValue) || trimmedValue.length > 1500) {
+          Cookies.remove(PROMPT_COOKIE_KEY);
+          return;
+        }
+
         Cookies.set(PROMPT_COOKIE_KEY, trimmedValue, { expires: 30 });
       }, 1000),
       [],
@@ -1137,6 +1146,7 @@ export const ChatImpl = memo(
         ref={animationScope}
         textareaRef={textareaRef}
         input={input}
+        setInput={setInput}
         showChat={showChat}
         chatStarted={chatStarted}
         isStreaming={isLoading || fakeLoading}

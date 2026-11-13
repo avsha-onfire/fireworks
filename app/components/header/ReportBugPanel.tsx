@@ -1,7 +1,6 @@
 import * as Dialog from '@radix-ui/react-dialog';
 import { Bug, ExternalLink, X } from 'lucide-react';
-
-const BUG_REPORT_URL = 'https://github.com/stackblitz-labs/bolt.diy/issues/new?template=bug_report.yml';
+import { BRAND } from '~/lib/brand';
 
 interface ReportBugPanelProps {
   open: boolean;
@@ -22,7 +21,7 @@ export function ReportBugPanel({ open, onClose }: ReportBugPanelProps) {
               <div className="min-w-0">
                 <Dialog.Title className="truncate text-sm font-semibold">Report a bug</Dialog.Title>
                 <Dialog.Description className="truncate text-xs text-bolt-elements-textSecondary">
-                  Help us improve bolt.diy
+                  Help us improve {BRAND.name}
                 </Dialog.Description>
               </div>
             </div>
@@ -41,11 +40,11 @@ export function ReportBugPanel({ open, onClose }: ReportBugPanelProps) {
           <div className="flex flex-1 flex-col items-start justify-center px-8 py-12 sm:px-14">
             <p className="mb-2 text-lg font-semibold">Found something that isn’t working?</p>
             <p className="mb-6 max-w-lg text-sm leading-6 text-bolt-elements-textSecondary">
-              Bug reports are submitted through GitHub. Continue there to describe the problem and send it to the
-              bolt.diy team.
+              Bug reports are submitted through GitHub. Continue there to describe the problem and send it to the{' '}
+              {BRAND.name} team.
             </p>
             <a
-              href={BUG_REPORT_URL}
+              href={BRAND.bugReportUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 rounded-lg border border-bolt-elements-borderColor bg-bolt-elements-background-depth-2 px-4 py-2.5 text-sm font-medium text-bolt-elements-textPrimary transition-colors hover:bg-bolt-elements-background-depth-3"

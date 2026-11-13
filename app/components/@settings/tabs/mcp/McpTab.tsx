@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-toastify';
+import McpCatalog from '~/components/@settings/tabs/mcp/McpCatalog';
 import McpServerList from '~/components/@settings/tabs/mcp/McpServerList';
 import type { MCPConfig } from '~/lib/services/mcpService';
 import { useMCPStore } from '~/lib/stores/mcp';
@@ -36,6 +37,7 @@ export default function McpTab() {
 
   const [isSaving, setIsSaving] = useState(false);
   const [mcpConfigText, setMCPConfigText] = useState('');
+  const [hasUnsavedEdits, setHasUnsavedEdits] = useState(false);
   const [maxLLMSteps, setMaxLLMSteps] = useState(1);
   const [error, setError] = useState<string | null>(null);
   const [isCheckingServers, setIsCheckingServers] = useState(false);
@@ -52,6 +54,7 @@ export default function McpTab() {
 
   useEffect(() => {
     setMCPConfigText(JSON.stringify(settings.mcpConfig, null, 2));
+    setHasUnsavedEdits(false);
     setMaxLLMSteps(settings.maxLLMSteps);
     setError(null);
   }, [settings]);
@@ -98,6 +101,7 @@ export default function McpTab() {
 
   const handleLoadExample = () => {
     setMCPConfigText(JSON.stringify(EXAMPLE_MCP_CONFIG, null, 2));
+    setHasUnsavedEdits(true);
     setError(null);
   };
 
@@ -126,6 +130,14 @@ export default function McpTab() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
+      <McpCatalog
+        hasUnsavedEdits={hasUnsavedEdits}
+        onDiscardEdits={() => {
+          setMCPConfigText(JSON.stringify(settings.mcpConfig, null, 2));
+          setHasUnsavedEdits(false);
+        }}
+      />
+
       <section aria-labelledby="server-status-heading">
         <div className="flex justify-between items-center mb-3">
           <h2 className="text-base font-medium text-bolt-elements-textPrimary">MCP Servers Configured</h2>{' '}
@@ -168,7 +180,10 @@ export default function McpTab() {
             <textarea
               id="mcp-config"
               value={mcpConfigText}
-              onChange={(e) => setMCPConfigText(e.target.value)}
+              onChange={(e) => {
+                setMCPConfigText(e.target.value);
+                setHasUnsavedEdits(true);
+              }}
               className={classNames(
                 'w-full px-3 py-2 rounded-lg text-sm font-mono h-72',
                 'bg-[#F8F8F8] dark:bg-[#1A1A1A]',

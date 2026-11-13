@@ -24,6 +24,7 @@ import { createAgentStreamRecovery } from '~/lib/.server/llm/agent-stream';
 import { MAX_RESPONSE_SEGMENTS, MAX_TOKENS, type FileMap } from '~/lib/.server/llm/constants';
 import { shouldOptimizeRequestContext } from '~/lib/.server/llm/context-optimization';
 import { createSummary } from '~/lib/.server/llm/create-summary';
+import { getGtmSystemBlock } from '~/lib/.server/llm/prompt-gtm';
 import { getWebResearchInstructions } from '~/lib/.server/llm/prompt-web-tools';
 import { getFilePaths, selectContext } from '~/lib/.server/llm/select-context';
 import { streamText, type StreamingOptions } from '~/lib/.server/llm/stream-text';
@@ -360,6 +361,13 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
         const options: Omit<StreamingOptions, 'messages'> = {
           supabaseConnection: supabase,
           system: [
+            getGtmSystemBlock({
+              gtmContext: body.gtmContext,
+              chatMode,
+              promptId,
+              mcpToolNames: Object.keys(mcpTools),
+              browserUseToolNames,
+            }),
             getWebResearchInstructions({
               browserUseToolNames,
               webToolNames: Object.keys(projectTools).filter(

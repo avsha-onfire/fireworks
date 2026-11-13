@@ -31,3 +31,9 @@ pnpm-lock.yaml text eol=lf
 *.zip binary
 *.gz binary
 *.wasm binary
+
+# README.md is rewritten for this fork. When upstream changes its README too,
+# keep the fork's version instead of stopping the merge on a conflict. Git only
+# honours this in a clone where the driver is defined, so run this once per clone:
+#   git config merge.ours.driver true
+README.md merge=ours

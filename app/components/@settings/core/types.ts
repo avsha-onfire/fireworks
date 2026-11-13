@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 export type SettingCategory = 'profile' | 'file_sharing' | 'connectivity' | 'system' | 'services' | 'preferences';
 
 export type TabType =
+  | 'gtm-workspace'
   | 'profile'
   | 'settings'
   | 'notifications'
@@ -69,6 +70,7 @@ export interface TabWindowConfig {
 }
 
 export const TAB_LABELS: Record<TabType, string> = {
+  'gtm-workspace': 'GTM Workspace',
   profile: 'Profile',
   settings: 'Settings',
   notifications: 'Notifications',
@@ -83,7 +85,7 @@ export const TAB_LABELS: Record<TabType, string> = {
   vercel: 'Vercel',
   supabase: 'Supabase',
   'event-logs': 'Event Logs',
-  mcp: 'MCP Servers',
+  mcp: 'Data connectors (MCP)',
   plugins: 'Plugins',
 };
 

@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import type { KeyboardEvent } from 'react';
+import { providerDisplayName } from '~/lib/brand';
 import type { ModelInfo } from '~/lib/modules/llm/types';
 import { LOCAL_PROVIDERS } from '~/lib/stores/settings';
 import type { ProviderInfo } from '~/types/model';
@@ -243,7 +244,7 @@ export const ModelSelector = ({
           ...provider,
           searchScore: match.score,
           searchMatches: match.matches,
-          highlightedName: highlightText(provider.name, debouncedProviderSearchQuery),
+          highlightedName: highlightText(providerDisplayName(provider.name), debouncedProviderSearchQuery),
         };
       })
       .filter((provider) => provider.searchMatches)
@@ -486,7 +487,7 @@ export const ModelSelector = ({
                   }
                 />
               )}
-              {provider?.name || 'Select provider'}
+              {provider?.name ? providerDisplayName(provider.name) : 'Select provider'}
             </div>
             <div
               className={classNames(
@@ -623,7 +624,7 @@ export const ModelSelector = ({
                       )}
                       <span
                         dangerouslySetInnerHTML={{
-                          __html: (providerOption as any).highlightedName || providerOption.name,
+                          __html: (providerOption as any).highlightedName || providerDisplayName(providerOption.name),
                         }}
                       />
                     </div>

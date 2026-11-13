@@ -5,8 +5,9 @@ import { readJsonBody } from '~/lib/.server/api/read-body';
 import { REQUEST_LIMITS, enhancerRequestSchema, parseBody } from '~/lib/.server/api/schemas';
 import { streamText } from '~/lib/.server/llm/stream-text';
 import { getApiKeysFromCookie, getProviderSettingsFromCookie } from '~/lib/api/cookies';
+import { GTM_ENHANCER_SYSTEM, getGtmEnhancerPrompt } from '~/lib/gtm/prompt';
+import { sanitizeGtmWorkspace } from '~/lib/gtm/workspace';
 import { createMessage } from '~/lib/persistence/messageMigration';
-import { stripIndents } from '~/utils/stripIndent';
 
 export async function action(args: ActionFunctionArgs) {
   return enhancerAction(args);
@@ -41,42 +42,14 @@ async function enhancerAction({ context, request }: ActionFunctionArgs) {
           role: 'user',
           text:
             `[Model: ${model}]\n\n[Provider: ${providerName}]\n\n` +
-            stripIndents`
-            You are a professional prompt engineer specializing in crafting precise, effective prompts.
-            Your task is to enhance prompts by making them more specific, actionable, and effective.
-
-            I want you to improve the user prompt that is wrapped in \`<original_prompt>\` tags.
-
-            For valid prompts:
-            - Make instructions explicit and unambiguous
-            - Add relevant context and constraints
-            - Remove redundant information
-            - Maintain the core intent
-            - Ensure the prompt is self-contained
-            - Use professional language
-
-            For invalid or unclear prompts:
-            - Respond with clear, professional guidance
-            - Keep responses concise and actionable
-            - Maintain a helpful, constructive tone
-            - Focus on what the user should provide
-            - Use a standard template for consistency
-
-            IMPORTANT: Your response must ONLY contain the enhanced prompt text.
-            Do not include any explanations, metadata, or wrapper tags.
-
-            <original_prompt>
-              ${message}
-            </original_prompt>
-          `,
+            getGtmEnhancerPrompt(message, sanitizeGtmWorkspace(body.gtmContext)),
         }) as unknown as Omit<UIMessage, 'id'>,
       ],
       env: context.cloudflare?.env as any,
       apiKeys,
       providerSettings,
       options: {
-        system:
-          'You are a senior software principal architect, you should help the user analyse the user query and enrich it with the necessary context and constraints to make it more specific, actionable, and effective. You should also ensure that the prompt is self-contained and uses professional language. Your response should ONLY contain the enhanced prompt text. Do not include any explanations, metadata, or wrapper tags.',
+        system: GTM_ENHANCER_SYSTEM,
 
         /*
          * onError: (event) => {

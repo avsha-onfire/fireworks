@@ -1,6 +1,6 @@
 {
   "name": "bolt",
-  "description": "An AI Agent",
+  "description": "The AI app builder for go-to-market teams",
   "private": true,
   "license": "MIT",
   "sideEffects": false,

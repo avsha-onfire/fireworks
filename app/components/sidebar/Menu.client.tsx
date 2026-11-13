@@ -18,6 +18,7 @@ import { Dialog, DialogButton, DialogDescription, DialogRoot, DialogTitle } from
 import { DocumentationPanel } from '~/components/ui/DocumentationPanel';
 import { SettingsButton, HelpButton } from '~/components/ui/SettingsButton';
 import { ThemeSwitch } from '~/components/ui/ThemeSwitch';
+import { OPEN_SETTINGS_EVENT, type OpenSettingsDetail } from '~/lib/gtm/events';
 import { useSearchFilter } from '~/lib/hooks/useSearchFilter';
 import { db, deleteById, getAll, chatId, type ChatHistoryItem, useChatHistory } from '~/lib/persistence';
 import { DEFAULT_AVATAR, profileStore } from '~/lib/stores/profile';
@@ -325,6 +326,20 @@ export const Menu = () => {
 
     return () => {
       document.removeEventListener('open-github-settings', handleOpenGitHubSettings);
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleOpenSettings = (event: Event) => {
+      setSettingsInitialTab((event as CustomEvent<OpenSettingsDetail>).detail.tab);
+      setIsSettingsOpen(true);
+      setOpen(false);
+    };
+
+    document.addEventListener(OPEN_SETTINGS_EVENT, handleOpenSettings);
+
+    return () => {
+      document.removeEventListener(OPEN_SETTINGS_EVENT, handleOpenSettings);
     };
   }, []);
 

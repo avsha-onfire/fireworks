@@ -1,6 +1,7 @@
 import { generateId } from 'ai';
 import { useState, useCallback } from 'react';
 import { toast } from 'react-toastify';
+import { BRAND } from '~/lib/brand';
 import { useIndexedDB } from '~/lib/hooks/useIndexedDB';
 import { ImportExportService } from '~/lib/services/importExportService';
 
@@ -105,7 +106,7 @@ export function useDataOperations({
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'bolt-settings.json';
+      a.download = `${BRAND.fileSlug}-settings.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -200,7 +201,7 @@ export function useDataOperations({
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `bolt-settings-${categoryIds.join('-')}.json`;
+        a.download = `${BRAND.fileSlug}-settings-${categoryIds.join('-')}.json`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -326,7 +327,7 @@ export function useDataOperations({
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'bolt-chats.json';
+      a.download = `${BRAND.fileSlug}-chats.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -437,7 +438,7 @@ export function useDataOperations({
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'bolt-selected-chats.json';
+        a.download = `${BRAND.fileSlug}-selected-chats.json`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -949,7 +950,7 @@ export function useDataOperations({
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'bolt-api-keys-template.json';
+      a.download = `${BRAND.fileSlug}-api-keys-template.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -1024,7 +1025,7 @@ export function useDataOperations({
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'bolt-api-keys.json';
+      a.download = `${BRAND.fileSlug}-api-keys.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
