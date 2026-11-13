@@ -36,6 +36,7 @@ export default [
   { file: 'routes/api.llmcall.ts', path: '/api/llmcall' },
   { file: 'routes/api.mcp-check.ts', path: '/api/mcp-check' },
   { file: 'routes/api.mcp-update-config.ts', path: '/api/mcp-update-config' },
+  { file: 'routes/api.mcp-oauth.$step.ts', path: '/api/mcp-oauth/:step' },
   { file: 'routes/api.models.ts', path: '/api/models' },
   { file: 'routes/api.models.$provider.ts', path: '/api/models/:provider' },
   { file: 'routes/api.netlify-deploy.ts', path: '/api/netlify-deploy' },

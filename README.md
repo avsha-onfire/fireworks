@@ -23,7 +23,7 @@ Fireworks is a fork of [bolt.diy](https://github.com/stackblitz-labs/bolt.diy), 
 - **Blueprints.** 22 app recipes in 6 categories (Sales, Prospecting, Marketing, RevOps, Customer Success, Leadership). Clicking one fills the message box. It does not send. Each card says which export to bring ("Works with: ...").
 - **Role-aware examples.** 7 one-line example requests under the message box, chosen by the role in your workspace. Clicking one sends it straight away.
 - **Data-file summaries.** Attach (Attach File in the message box menu), drop or paste a `.csv`, `.tsv` or `.json` file and a summary of its shape is added to your message. The file itself is not uploaded. Excel files are not read: export the sheet as CSV.
-- **Data connectors.** Settings → Data connectors (MCP) lists vendor-hosted MCP servers. 12 can be added with a key (Zapier, Snowflake, Apollo, Airtable, Close, Intercom, Notion, PostHog, Mixpanel, Linear, Atlassian, Supabase). 15 need a vendor sign-in that this build does not support and are listed with a workaround: export a CSV and attach it (for Slack, paste the messages into your message).
+- **Data connectors.** Settings → Data connectors (MCP) lists vendor-hosted MCP servers. 12 can be added with a key (Zapier, Snowflake, Apollo, Airtable, Close, Intercom, Notion, PostHog, Mixpanel, Linear, Atlassian, Supabase). 2 connect by signing in with the vendor (HubSpot, Salesforce) once an administrator has registered an app with each; see [Vendor sign-in for connectors](#vendor-sign-in-for-connectors). 13 need a vendor sign-in that this build does not support yet and are listed with a workaround: export a CSV and attach it (for Slack, paste the messages into your message).
 - **GTM instructions.** Every chat request includes a GTM block, placed after the base build or discuss prompt: metric definitions (win rate, pipeline coverage, sales velocity, NRR, magic number), CRM stage and forecast defaults for Salesforce and HubSpot, standards for record, analytics and calculator apps, and rules for seed data and connected tools. The block tells the model to build non-GTM requests normally.
 - **Prompt enhancer.** Enhance Prompt in the message box menu rewrites a short request into a first-version app spec: persona, entities, at most 3 views, 4 to 6 metrics with formulas, filters, seed data, CSV import and export.
 - **Data-app starter.** An app request that names no framework starts from the `Vite Shadcn` starter (Vite, React, TypeScript, Tailwind, shadcn/ui). Naming a framework still selects that framework's starter. Solid, Remix and Expo are also sales words, so they count only when capitalised and used as a framework name ("with Solid", "a Remix site"). A request for a one-off script starts from a blank project.
@@ -31,7 +31,7 @@ Fireworks is a fork of [bolt.diy](https://github.com/stackblitz-labs/bolt.diy), 
 
 What the build does not do:
 
-- No vendor sign-in (OAuth) for connectors. Salesforce, HubSpot, Pipedrive, Attio, Outreach, Salesloft, Gong, ZoomInfo, Clay, Common Room, Zendesk, Slack, Asana, BigQuery and Amplitude are listed for reference only.
+- Vendor sign-in (OAuth) works for HubSpot and Salesforce only. Pipedrive, Attio, Outreach, Salesloft, Gong, ZoomInfo, Clay, Common Room, Zendesk, Slack, Asana, BigQuery and Amplitude are listed for reference only.
 - No user accounts. See [Privacy and security](#privacy-and-security) before sharing one server between people.
 - Attached data files are not written into the project. The model sees the summary. You load the file into the built app yourself.
 - Connectors are used while building, to read your schema. Apps you build do not stay connected.
@@ -98,6 +98,25 @@ OLLAMA_API_BASE_URL=http://127.0.0.1:11434
 LMSTUDIO_API_BASE_URL=http://127.0.0.1:1234
 ```
 
+### Vendor sign-in for connectors
+
+HubSpot and Salesforce connect by signing in with the vendor (OAuth). Neither offers dynamic client registration for its MCP server, so an administrator registers one app per deployment with each vendor and gives the server its credentials. Until then the entry says "Not set up on this server" and shows the callback URL to register.
+
+| Vendor | Register | Server variables |
+|---|---|---|
+| HubSpot | Development → MCP Connectors → Create MCP connector. Add the callback URL as a redirect URL. | `HUBSPOT_MCP_CLIENT_ID`, `HUBSPOT_MCP_CLIENT_SECRET` |
+| Salesforce | Setup → External Client App Manager → New External Client App. Enable OAuth, add the callback URL, select the `mcp_api` and `refresh_token` scopes, require PKCE and issue JWT-based access tokens. A new app can take up to 30 minutes to work. | `SALESFORCE_MCP_CLIENT_ID` (the consumer key), and `SALESFORCE_MCP_CLIENT_SECRET` if the app requires a secret |
+
+The callback URL is the server's address plus `/api/mcp-oauth/callback`, for example `http://localhost:5173/api/mcp-oauth/callback`. The MCP spec allows only HTTPS or localhost. Behind an HTTPS proxy, set `MCP_OAUTH_REDIRECT_URI` to the public callback URL. Put the variables in `.env.local`, never under a `VITE_` name, and restart the server.
+
+To check a HubSpot connection in local dev:
+
+1. Set the two HubSpot variables in `.env.local` and run `pnpm run dev`.
+2. Open Settings → Data connectors (MCP), find HubSpot MCP Server and click Sign in. Approve in the pop-up.
+3. The entry shows Connected and lists HubSpot's tools. Ask the builder to list your deal pipelines and stages, and approve the HubSpot tool calls it makes.
+
+Salesforce orgs that block logins from `login.salesforce.com` or `test.salesforce.com` need a My Domain address, which this build does not support yet.
+
 ### Brand
 
 `app/lib/brand.ts` is the single source of product identity: name, assistant name, tagline, landing headline and sub-headline, composer placeholder, repository and bug-report links, documentation link, upstream attribution and the prefix of exported file names. `pageTitle()` builds document titles and `providerDisplayName()` labels model providers.
@@ -119,14 +138,17 @@ Internal identifiers keep their upstream `bolt` spelling on purpose: CSS tokens 
 | `app/lib/gtm/example-prompts.ts` | Example requests, default and per role |
 | `app/lib/gtm/starter-selection.ts` | Default starter, the starter's opening line, chat titles, handling of sales words that double as framework names ("solid", "expo", "remix", "script") |
 | `app/lib/gtm/data-preview.ts`, `data-file-attach.ts`, `data-file-block.ts` | Data-file summaries: parsing, privacy rules, the attach handler, the fenced block |
-| `app/lib/gtm/connectors.ts`, `connector-activation.ts` | The connector catalog and the add and remove flow |
-| `app/components/gtm/` | Home sections, blueprint gallery, workspace form, workspace nudge |
+| `app/lib/gtm/connectors.ts`, `connector-activation.ts` | The connector catalog, including the sign-in blocks for HubSpot and Salesforce, and the add and remove flow for key connectors |
+| `app/lib/.server/mcp-oauth/` | Vendor sign-in: discovery and its checks, the PKCE flow, sessions, token refresh, per-session MCP servers. Its `README.md` is the design |
+| `app/routes/api.mcp-oauth.$step.ts` | Sign-in routes: start, callback, status, disconnect |
+| `app/lib/gtm/connector-sign-in.ts`, `sign-in-result.ts` | The browser side of sign-in and the result codes it shares with the server |
+| `app/components/gtm/` | Home sections, blueprint gallery, workspace form, workspace nudge, the connector sign-in section |
 | `app/components/@settings/tabs/gtm-workspace/` | The GTM Workspace settings tab |
 | `app/types/design-scheme.ts` | Default palette and presets for generated apps |
 
 The full instruction text is capped at 1,350 words and the compact variant at 280, because the system prompt is resent on every model step. The compact variant is used with the Tiny Tim prompt (Settings → Features → Prompt Library). Tests enforce both limits.
 
-Connector endpoints, headers and scopes in `connectors.ts` were taken from each vendor's documentation on the date stored with the entry. No vendor endpoint was called while building the catalog, so treat a first connection as a test.
+Connector endpoints, headers and scopes in `connectors.ts` were taken from each vendor's documentation on the date stored with the entry. No vendor endpoint was called while building the key entries, so treat a first connection as a test. The HubSpot and Salesforce sign-in entries were also checked against the OAuth metadata their servers publish. No sign-in was completed against either vendor while building them; the flow is tested against a stand-in vendor built on the MCP SDK's own server.
 
 ## Privacy and security
 
@@ -189,10 +211,29 @@ The connector page says:
 
 In practice:
 
-- The server holds one connector configuration for the whole process, not one per visitor. Do not share one server between people who must not share connectors.
+- The server holds one connector configuration for the whole process, not one per visitor. Do not share one server between people who must not share connectors. Sign-in connectors work differently; see [Vendor sign-in](#vendor-sign-in).
 - 4 of the 12 key-based entries are limited to reading by the connection itself (Close, Linear, PostHog, Supabase). For the other 8 the key decides what the connection can change, and the entry's note says so. Apollo accepts only a master key with full workspace access.
 - When the server returns connector status to the browser, it masks header and environment values, the user name, password and query values of a server URL, and credentials in command arguments: values after `=`, the value after a flag named like a token, key, secret or password, `--header` values, URLs and `Bearer` tokens. The same values are masked in the connection errors it returns and logs. Its debug logs name the server only. A token in a URL path, in the command itself or in an argument without such a flag before it is not masked.
 - Settings → Data Management → Export All Settings writes a JSON file that includes your API keys and connector keys. Treat the file as a secret.
+
+### Vendor sign-in
+
+The sign-in section of the connector page says:
+
+> Vendor sign-ins are kept in this Fireworks server's memory and tied to this browser by a cookie. Tokens are not saved in the browser or in settings exports, and other people using this server cannot use your sign-in. Restarting the server signs you out.
+
+In practice:
+
+- The server runs the OAuth authorization code flow with PKCE (S256) and a resource indicator (RFC 8707), using the MCP SDK's client functions. Endpoints come from the metadata each MCP server publishes, and sign-in stops unless the authorization server is the one the vendor documents, its endpoints are HTTPS on that host and it supports PKCE.
+- The app credentials are server environment variables and never reach a browser.
+- Access and refresh tokens stay in the server's memory, in a session tied to one browser by an `HttpOnly`, `SameSite=Lax` cookie (`Secure` with the `__Host-` prefix over HTTPS). They are not in local storage, settings exports, API responses or logs. The server's responses name the connected server's URL and tools only. Tests check the sign-in routes, `/api/mcp-check`, `/api/mcp-update-config` and the chat's tool calls for this.
+- A request without that cookie cannot see or use the connection, so other visitors of the same server cannot use your sign-in. Anyone who can use your browser profile can, and so can whoever runs the server.
+- A sign-in completes only in the browser that started it: the callback must carry the same cookie, and each sign-in link works once, for 10 minutes. The authorization code appears once in the callback address. It is redeemed on the server with the PKCE verifier and, for HubSpot, the client secret, and the callback then redirects to an address without it.
+- The server refreshes an access token 60 seconds before it expires, or once after the vendor rejects it, one refresh at a time per connection. If the vendor refuses the refresh token, the tokens are dropped and the entry says "Sign-in expired".
+- Disconnect deletes the tokens from this server. It does not revoke them at the vendor: remove the app's access in HubSpot or Salesforce for that.
+- Restarting the server signs everyone out. Sign-in needs one server process (`pnpm run dev`, `pnpm run preview`, Docker). On a Cloudflare Workers deployment requests can reach different isolates, so sign-in is not reliable there. It has not been tested in the desktop app.
+- Salesforce connects to the SObject Reads server, which cannot create, update or delete records. HubSpot has no read-only option: its tools can create and update records, properties and pipelines. Every tool call waits for your approval in the chat. Once HubSpot is connected, its entry lists the tools with on and off switches and a button that turns off every tool HubSpot does not mark read-only. That mark is HubSpot's own hint, not a guarantee.
+- Tool results, including CRM records, go to your AI provider like any other tool result. See [What goes to the AI provider](#what-goes-to-the-ai-provider).
 
 ### Environment variables
 
@@ -244,7 +285,7 @@ Do not run `scripts/update.sh`. It is an upstream script that downloads the late
 
 | Area | Files | Seam |
 |---|---|---|
-| Chat pipeline | `app/routes/api.chat.ts` | One import and one element at the start of the `system` array |
+| Chat pipeline | `app/routes/api.chat.ts` | One import and one element at the start of the `system` array; one import and `withSessionConnectors()` around the MCP service, which adds the browser's signed-in connector tools |
 | | `app/lib/.server/llm/stream-text.ts` | One import and one line in `sanitizeText` |
 | | `app/routes/api.enhancer.ts`, `app/lib/hooks/usePromptEnhancer.ts` | Instruction text from `app/lib/gtm/prompt.ts`; `gtmContext` in the request body |
 | Home screen | `app/components/chat/BaseChat.tsx` | Headline from `BRAND`, `<GtmHomeSections />`, `setInput` prop, data-file guard in the file picker and paste handler, landing textarea height, model panel folded only when the selected provider has a saved key |
@@ -260,12 +301,13 @@ Do not run `scripts/update.sh`. It is an upstream script that downloads the late
 | | `app/components/onboarding/FirstRunOnboarding.tsx` | "Your team" step in place of the MCP JSON step |
 | | `app/components/sidebar/Menu.client.tsx` | Listener that opens settings on a given tab |
 | | `app/lib/services/importExportService.ts` | Workspace in export, import and reset |
-| Connector secrets | `app/lib/services/mcpService.ts`, `app/routes/api.mcp-check.ts`, `app/routes/api.mcp-update-config.ts` | Redacted responses, server names only in debug logs, masked connection errors in error logs, security wrapper |
+| Connector secrets | `app/lib/services/mcpService.ts`, `app/routes/api.mcp-check.ts`, `app/routes/api.mcp-update-config.ts` | Redacted responses, server names only in debug logs, masked connection errors in error logs, security wrapper. The two routes also add the browser's signed-in servers to their response |
+| Routes | `app/routes.ts` | One entry for `/api/mcp-oauth/:step` |
 | Generated-app design | `app/types/design-scheme.ts`, `app/components/ui/ColorSchemeDialog.tsx` | Default palette, presets, preset row |
 | Brand strings | Header, report-bug panel, chat and deploy alerts, model selector, terminal tab, documentation panel, several settings tabs, deploy dialogs, export file names, route `meta`, `api.bug-report.ts`, `api.system.git-info.ts` and a few service and store messages | One import of `BRAND` plus the string |
 | Packaging | `electron-builder.yml`, `electron-update.yml`, `package.json` (`description`), `pre-start.cjs`, `.dockerignore`, 2 e2e tests | Product name, publish target, licence file shipped |
 | Assets | `public/` icons and logo, `icons/logo.svg`, `assets/icons/` | Replaced. 7 unused upstream logo and preview images are deleted. |
-| Docs | `README.md`, `.gitattributes`, `.env.example` | This file, the README merge rule, comments only |
+| Docs | `README.md`, `.gitattributes`, `.env.example` | This file, the README merge rule, comments and commented-out settings |
 
 Existing upstream specs that gained tests: `selectStarterTemplate.spec.ts`, `api.github-template.spec.ts`, `importExportService.spec.ts`.
 

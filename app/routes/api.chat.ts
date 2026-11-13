@@ -29,6 +29,7 @@ import { getWebResearchInstructions } from '~/lib/.server/llm/prompt-web-tools';
 import { getFilePaths, selectContext } from '~/lib/.server/llm/select-context';
 import { streamText, type StreamingOptions } from '~/lib/.server/llm/stream-text';
 import { extractPropertiesFromMessage } from '~/lib/.server/llm/utils';
+import { withSessionConnectors } from '~/lib/.server/mcp-oauth/session-servers';
 import { getApiKeysFromCookie, getProviderSettingsFromCookie } from '~/lib/api/cookies';
 import { getAgentLoopInstructions, getAgentLoopProgress } from '~/lib/common/agentLoop';
 import { CONTINUE_PROMPT } from '~/lib/common/prompts/prompts';
@@ -104,7 +105,7 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
   let progressCounter: number = 1;
 
   try {
-    const mcpService = MCPService.getInstance();
+    const mcpService = await withSessionConnectors(MCPService.getInstance(), request, context);
     const totalMessageContent = messages.reduce((acc, message) => acc + getMessageText(message), '');
     logger.debug(`Total message length: ${totalMessageContent.split(' ').length}, words`);
 
