@@ -1,4 +1,5 @@
 import { StreamingMessageParser, type StreamingMessageParserOptions } from './message-parser';
+import { BRAND } from '~/lib/brand';
 import { WORK_DIR } from '~/utils/constants';
 import { createScopedLogger } from '~/utils/logger';
 
@@ -7,8 +8,7 @@ const TOOL_CALL_CLOSE = '<|tool_call_end|>';
 const XML_TOOL_CALL_OPEN = '<tool_call>';
 const XML_TOOL_CALL_CLOSE = '</tool_call>';
 
-const UNSUPPORTED_TOOL_CALL_NOTICE =
-  'The selected model returned an unsupported tool call instead of a Bolt file action. Choose a model with tool-calling support or ask it to use a Bolt artifact.';
+const UNSUPPORTED_TOOL_CALL_NOTICE = `The selected model returned an unsupported tool call instead of a ${BRAND.name} file action. Choose a model with tool-calling support or ask it to use a ${BRAND.name} artifact.`;
 
 interface TextFileWrite {
   filePath: string;

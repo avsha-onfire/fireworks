@@ -13,6 +13,7 @@ import { EventLogsTab } from '~/components/@settings/tabs/event-logs/EventLogsTa
 import FeaturesTab from '~/components/@settings/tabs/features/FeaturesTab';
 import GitHubTab from '~/components/@settings/tabs/github/GitHubTab';
 import GitLabTab from '~/components/@settings/tabs/gitlab/GitLabTab';
+import GtmWorkspaceTab from '~/components/@settings/tabs/gtm-workspace/GtmWorkspaceTab';
 import McpTab from '~/components/@settings/tabs/mcp/McpTab';
 import NetlifyTab from '~/components/@settings/tabs/netlify/NetlifyTab';
 import NotificationsTab from '~/components/@settings/tabs/notifications/NotificationsTab';
@@ -25,6 +26,7 @@ import SupabaseTab from '~/components/@settings/tabs/supabase/SupabaseTab';
 import VercelTab from '~/components/@settings/tabs/vercel/VercelTab';
 import { DialogTitle } from '~/components/ui/Dialog';
 import { DocumentationPanel } from '~/components/ui/DocumentationPanel';
+import { BRAND } from '~/lib/brand';
 import { useConnectionStatus } from '~/lib/hooks/useConnectionStatus';
 import { useFeatures } from '~/lib/hooks/useFeatures';
 import { useNotifications } from '~/lib/hooks/useNotifications';
@@ -48,6 +50,7 @@ const BetaLabel = () => (
 );
 
 const NAV_GROUPS: { label: string; tabs: TabType[] }[] = [
+  { label: 'Your team', tabs: ['gtm-workspace'] },
   { label: 'Preferences', tabs: ['settings'] },
   { label: 'Account', tabs: ['profile', 'notifications'] },
   { label: 'Workspace', tabs: ['features', 'data', 'event-logs'] },
@@ -135,6 +138,8 @@ export const ControlPanel = ({ open, onClose, initialTab }: ControlPanelProps) =
   // Handlers
   const getTabComponent = (tabId: TabType) => {
     switch (tabId) {
+      case 'gtm-workspace':
+        return <GtmWorkspaceTab />;
       case 'profile':
         return <ProfileTab />;
       case 'settings':
@@ -347,6 +352,14 @@ export const ControlPanel = ({ open, onClose, initialTab }: ControlPanelProps) =
                           </div>
                         ))}
                       </div>
+                      <a
+                        href={BRAND.upstreamUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-6 inline-block text-xs text-bolt-elements-textTertiary hover:text-bolt-elements-textSecondary hover:underline"
+                      >
+                        Built on {BRAND.upstreamName} (open source, MIT)
+                      </a>
                     </div>
                   ) : null}
                   {hasVisitedCloudProviders && (

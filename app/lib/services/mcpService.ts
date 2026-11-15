@@ -3,6 +3,7 @@ import { Experimental_StdioMCPTransport } from '@ai-sdk/mcp/mcp-stdio';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { convertToModelMessages, type ToolSet, type UIMessage, type UIMessageStreamWriter } from 'ai';
 import { z } from 'zod';
+import { redactErrorText } from './mcpRedaction';
 import {
   getToolCallId,
   getToolInput,
@@ -164,7 +165,7 @@ export class MCPService {
   }
 
   async updateConfig(config: MCPConfig) {
-    logger.debug('updating config', JSON.stringify(config));
+    logger.debug('updating config for servers:', Object.keys(config?.mcpServers ?? {}).join(', '));
     this._config = config;
     await this._createClients();
 
@@ -175,7 +176,7 @@ export class MCPService {
     serverName: string,
     config: StreamableHTTPServerConfig,
   ): Promise<MCPClient> {
-    logger.debug(`Creating Streamable-HTTP client for ${serverName} with URL: ${config.url}`);
+    logger.debug(`Creating Streamable-HTTP client for ${serverName}`);
 
     const client = await createMCPClient({
       transport: new StreamableHTTPClientTransport(new URL(config.url), {
@@ -189,7 +190,7 @@ export class MCPService {
   }
 
   private async _createSSEClient(serverName: string, config: SSEServerConfig): Promise<MCPClient> {
-    logger.debug(`Creating SSE client for ${serverName} with URL: ${config.url}`);
+    logger.debug(`Creating SSE client for ${serverName}`);
 
     const client = await createMCPClient({
       transport: config,
@@ -199,9 +200,7 @@ export class MCPService {
   }
 
   private async _createStdioClient(serverName: string, config: STDIOServerConfig): Promise<MCPClient> {
-    logger.debug(
-      `Creating STDIO client for '${serverName}' with command: '${config.command}' ${config.args?.join(' ') || ''}`,
-    );
+    logger.debug(`Creating STDIO client for '${serverName}'`);
 
     const client = await createMCPClient({ transport: new Experimental_StdioMCPTransport(config) });
 
@@ -257,7 +256,7 @@ export class MCPService {
             config,
           };
         } catch (error) {
-          logger.error(`Failed to get tools from server ${serverName}:`, error);
+          logger.error(`Failed to get tools from server ${serverName}:`, redactErrorText(error, config));
           this._mcpToolsPerServer[serverName] = {
             status: 'unavailable',
             error: 'could not retrieve tools from server',
@@ -266,7 +265,7 @@ export class MCPService {
           };
         }
       } catch (error) {
-        logger.error(`Failed to initialize MCP client for server: ${serverName}`, error);
+        logger.error(`Failed to initialize MCP client for server: ${serverName}`, redactErrorText(error, config));
         this._mcpToolsPerServer[serverName] = {
           status: 'unavailable',
           error: (error as Error).message,
@@ -306,7 +305,7 @@ export class MCPService {
             config: server.config,
           };
         } catch (error) {
-          logger.error(`Failed to get tools from server ${serverName}:`, error);
+          logger.error(`Failed to get tools from server ${serverName}:`, redactErrorText(error, server.config));
           this._mcpToolsPerServer[serverName] = {
             status: 'unavailable',
             error: 'could not retrieve tools from server',
@@ -317,7 +316,7 @@ export class MCPService {
 
         logger.debug(`Checking MCP server "${serverName}" availability: end`);
       } catch (error) {
-        logger.error(`Failed to connect to server ${serverName}:`, error);
+        logger.error(`Failed to connect to server ${serverName}:`, redactErrorText(error, server.config));
         this._mcpToolsPerServer[serverName] = {
           status: 'unavailable',
           error: 'could not connect to server',

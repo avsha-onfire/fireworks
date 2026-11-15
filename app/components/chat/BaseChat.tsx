@@ -12,16 +12,19 @@ import GitCloneButton from './GitCloneButton';
 import LlmErrorAlert from './LLMApiAlert';
 import { Messages, type DisplayMessage } from './Messages.client';
 import ProgressCompilation from './ProgressCompilation';
-import StarterTemplates from './StarterTemplates';
 import { ToolApprovalTray } from './ToolApprovalTray';
-import { ExamplePrompts } from '~/components/chat/ExamplePrompts';
 import { ImportFolderButton } from '~/components/chat/ImportFolderButton';
 import { ImportZipButton } from '~/components/chat/ImportZipButton';
 import DeployChatAlert from '~/components/deploy/DeployAlert';
+import { GtmHomeSections } from '~/components/gtm/GtmHomeSections';
 import { Menu } from '~/components/sidebar/Menu.client';
 import type { ElementInfo } from '~/components/workbench/Inspector';
 import { WorkbenchReopenButton } from '~/components/workbench/WorkbenchReopenButton';
 import { API_KEYS_UPDATED_EVENT, type ApiKeysUpdatedDetail } from '~/lib/api/apiKeys';
+import { BRAND } from '~/lib/brand';
+import { handleDataFile } from '~/lib/gtm/data-file-attach';
+import { shouldFoldModelSettings } from '~/lib/gtm/model-settings';
+import type { ComposerInputSetter } from '~/lib/gtm/types';
 
 const LazyWorkbench = lazy(() =>
   import('~/components/workbench/Workbench.client').then((m) => ({ default: m.Workbench })),
@@ -52,6 +55,7 @@ interface BaseChatProps {
   enhancingPrompt?: boolean;
   promptEnhanced?: boolean;
   input?: string;
+  setInput?: ComposerInputSetter;
   model?: string;
   setModel?: (model: string) => void;
   provider?: ProviderInfo;
@@ -100,6 +104,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
       setProvider,
       providerList,
       input = '',
+      setInput,
       enhancingPrompt,
       handleInputChange,
 
@@ -136,7 +141,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
     },
     ref,
   ) => {
-    const TEXTAREA_MAX_HEIGHT = chatStarted ? 400 : 200;
+    const TEXTAREA_MAX_HEIGHT = chatStarted ? 400 : 280;
     const [apiKeys, setApiKeys] = useState<Record<string, string>>(getApiKeysFromCookies());
     const [modelList, setModelList] = useState<ModelInfo[]>([]);
     const [isModelSettingsCollapsed, setIsModelSettingsCollapsed] = useState(false);
@@ -148,6 +153,11 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
     const expoUrl = useStore(expoUrlAtom);
     const showWorkbench = useStore(workbenchStore.showWorkbench);
     const [qrModalOpen, setQrModalOpen] = useState(false);
+
+    // Fold the model picker away on the landing page when the selected provider has a saved key (after mount: the server cannot know).
+    React.useLayoutEffect(() => {
+      setIsModelSettingsCollapsed(shouldFoldModelSettings({ chatStarted, providerName: provider?.name, apiKeys }));
+    }, []);
 
     useEffect(() => {
       if (expoUrl) {
@@ -322,12 +332,12 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
     const handleFileUpload = () => {
       const input = document.createElement('input');
       input.type = 'file';
-      input.accept = 'image/*';
+      input.accept = 'image/*,.csv,.tsv,.json';
 
       input.onchange = async (e) => {
         const file = (e.target as HTMLInputElement).files?.[0];
 
-        if (file) {
+        if (file && !handleDataFile(file, setInput)) {
           const reader = new FileReader();
 
           reader.onload = (e) => {
@@ -350,6 +360,13 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
       }
 
       for (const item of items) {
+        const pastedFile = item.getAsFile();
+
+        if (pastedFile && handleDataFile(pastedFile, setInput)) {
+          e.preventDefault();
+          continue;
+        }
+
         if (item.type.startsWith('image/')) {
           e.preventDefault();
 
@@ -384,12 +401,12 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
         <div className="flex flex-col lg:flex-row overflow-y-auto w-full h-full">
           <div className={classNames(styles.Chat, 'flex flex-col flex-grow lg:min-w-[var(--chat-min-width)] h-full')}>
             {!chatStarted && (
-              <div id="intro" className="mt-[16vh] max-w-2xl mx-auto text-center px-4 lg:px-0">
+              <div id="intro" className="mt-[8vh] max-w-2xl mx-auto text-center px-4 lg:px-0">
                 <h1 className="text-3xl lg:text-6xl font-bold text-bolt-elements-textPrimary mb-4 animate-fade-in">
-                  Where ideas begin
+                  {BRAND.headline}
                 </h1>
                 <p className="text-md lg:text-xl mb-8 text-bolt-elements-textSecondary animate-fade-in animation-delay-200">
-                  Bring ideas to life in seconds or get help on existing projects.
+                  {BRAND.subheadline}
                 </p>
               </div>
             )}
@@ -467,6 +484,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                   setImageDataList={setImageDataList}
                   textareaRef={textareaRef}
                   input={input}
+                  setInput={setInput}
                   handleInputChange={handleInputChange}
                   handlePaste={handlePaste}
                   TEXTAREA_MIN_HEIGHT={TEXTAREA_MIN_HEIGHT}
@@ -497,7 +515,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
             </StickToBottom>
             <div className="flex flex-col justify-center">
               {!chatStarted && (
-                <div className="flex justify-center gap-2">
+                <div className="flex justify-center gap-2 order-last mt-4 mb-10">
                   <ImportFolderButton
                     importChat={importChat}
                     className={classNames(
@@ -524,16 +542,22 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                 </div>
               )}
               <div className="flex flex-col gap-5">
-                {!chatStarted &&
-                  ExamplePrompts((event, messageInput) => {
-                    if (isStreaming) {
-                      handleStop?.();
-                      return;
-                    }
+                {!chatStarted && (
+                  <GtmHomeSections
+                    input={input}
+                    setInput={setInput}
+                    handleInputChange={handleInputChange}
+                    textareaRef={textareaRef}
+                    onSendPrompt={(event, messageInput) => {
+                      if (isStreaming) {
+                        handleStop?.();
+                        return;
+                      }
 
-                    handleSendMessage?.(event, messageInput);
-                  })}
-                {!chatStarted && <StarterTemplates />}
+                      handleSendMessage?.(event, messageInput);
+                    }}
+                  />
+                )}
               </div>
             </div>
           </div>

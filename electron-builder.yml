@@ -1,11 +1,12 @@
 appId: com.stackblitz.bolt.diy
-productName: Bolt Local
+productName: Fireworks
 directories:
   buildResources: build
   output: dist
 files:
   - build/**/*
   - package.json
+  - LICENSE
   - node_modules/**/*
   - icons/**
   - electron-update.yml
@@ -55,9 +56,9 @@ npmRebuild: false
 
 publish:
   provider: github
-  owner: Derek-X-Wang
-  repo: bolt.local
-  private: true
+  owner: avsha-onfire
+  repo: fireworks
+  private: false
   releaseType: release
 
 electronDownload:

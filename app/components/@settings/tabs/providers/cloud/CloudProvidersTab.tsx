@@ -8,6 +8,7 @@ import { SiGoogle, SiGithub, SiHuggingface, SiPerplexity } from 'react-icons/si'
 import { TbBrain, TbCloudComputing } from 'react-icons/tb';
 import { toast } from 'react-toastify';
 import { Switch } from '~/components/ui/Switch';
+import { providerDisplayName } from '~/lib/brand';
 import { useSettings } from '~/lib/hooks/useSettings';
 import { logStore } from '~/lib/stores/logs';
 import { URL_CONFIGURABLE_PROVIDERS } from '~/lib/stores/settings';
@@ -107,10 +108,10 @@ const CloudProvidersTab = () => {
 
       if (enabled) {
         logStore.logProvider(`Provider ${provider.name} enabled`, { provider: provider.name });
-        toast.success(`${provider.name} enabled`);
+        toast.success(`${providerDisplayName(provider.name)} enabled`);
       } else {
         logStore.logProvider(`Provider ${provider.name} disabled`, { provider: provider.name });
-        toast.success(`${provider.name} disabled`);
+        toast.success(`${providerDisplayName(provider.name)} disabled`);
       }
     },
     [settings],
@@ -127,7 +128,7 @@ const CloudProvidersTab = () => {
         provider: provider.name,
         baseUrl: newBaseUrl,
       });
-      toast.success(`${provider.name} base URL updated`);
+      toast.success(`${providerDisplayName(provider.name)} base URL updated`);
       setEditingProvider(null);
     },
     [settings],
@@ -205,7 +206,7 @@ const CloudProvidersTab = () => {
                   <div className={classNames('w-6 h-6', 'transition-transform duration-200', 'group-hover:rotate-12')}>
                     {React.createElement(PROVIDER_ICONS[provider.name as ProviderName] || BsRobot, {
                       className: 'w-full h-full',
-                      'aria-label': `${provider.name} logo`,
+                      'aria-label': `${providerDisplayName(provider.name)} logo`,
                     })}
                   </div>
                 </motion.div>
@@ -214,7 +215,7 @@ const CloudProvidersTab = () => {
                   <div className="flex items-center justify-between gap-4 mb-2">
                     <div>
                       <h4 className="text-sm font-medium text-bolt-elements-textPrimary group-hover:text-purple-500 transition-colors">
-                        {provider.name}
+                        {providerDisplayName(provider.name)}
                       </h4>
                       <p className="text-xs text-bolt-elements-textSecondary mt-0.5">
                         {PROVIDER_DESCRIPTIONS[provider.name as keyof typeof PROVIDER_DESCRIPTIONS] ||

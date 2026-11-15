@@ -1,5 +1,6 @@
 import type { WebContainer, WebContainerProcess } from '@webcontainer/api';
 import { atom, type WritableAtom } from 'nanostores';
+import { BRAND } from '~/lib/brand';
 import type { ITerminal } from '~/types/terminal';
 import { newBoltShellProcess, newShellProcess } from '~/utils/shell';
 import { coloredText } from '~/utils/terminal';
@@ -53,7 +54,7 @@ export class TerminalStore {
 
       this.#boltOutputReady = true;
     } catch (error: any) {
-      terminal.write(coloredText.red('Failed to spawn bolt shell\n\n') + error.message);
+      terminal.write(coloredText.red(`Failed to spawn ${BRAND.name} shell\n\n`) + error.message);
       return;
     }
   }

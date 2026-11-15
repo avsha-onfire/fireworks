@@ -1,6 +1,8 @@
 import { type UIMessage } from 'ai';
 import Cookies from 'js-cookie';
+import { sanitizeGtmWorkspace } from '~/lib/gtm/workspace';
 import { getAllChats, deleteChat } from '~/lib/persistence/chats';
+import { GTM_WORKSPACE_STORAGE_KEY, resetGtmWorkspace, updateGtmWorkspace } from '~/lib/stores/gtmWorkspace';
 
 interface ExtendedMessage extends UIMessage {
   name?: string;
@@ -70,6 +72,7 @@ export class ImportExportService {
           bolt_settings: this._safeGetItem('bolt_settings'),
           bolt_profile: this._safeGetItem('bolt_profile'),
           theme: this._safeGetItem('theme'),
+          [GTM_WORKSPACE_STORAGE_KEY]: this._safeGetItem(GTM_WORKSPACE_STORAGE_KEY),
         },
 
         // Provider settings (both local and cloud)
@@ -280,6 +283,9 @@ export class ImportExportService {
    * @param db The IndexedDB database instance
    */
   static async resetAllSettings(db: IDBDatabase): Promise<void> {
+    // The workspace also lives in a store that is sent with every chat request, so empty it too.
+    resetGtmWorkspace();
+
     // 1. Clear all localStorage items related to application settings
     const localStorageKeysToPreserve: string[] = ['debug_mode']; // Keys to preserve if needed
 
@@ -671,6 +677,16 @@ export class ImportExportService {
    */
   private static _safeSetItem(key: string, value: any): void {
     try {
+      if (key === GTM_WORKSPACE_STORAGE_KEY) {
+        /*
+         * Imported files are untrusted. Sanitising first yields a complete workspace, so the import
+         * replaces the current one instead of merging into it, and the store refreshes the copy in use.
+         */
+        updateGtmWorkspace(sanitizeGtmWorkspace(value));
+
+        return;
+      }
+
       localStorage.setItem(key, JSON.stringify(value));
     } catch (err) {
       console.error(`Error setting localStorage item ${key}:`, err);

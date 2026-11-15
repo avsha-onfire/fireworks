@@ -1,17 +1,17 @@
 import Cookies from 'js-cookie';
 import { useEffect, useMemo, useState } from 'react';
+import { GtmWorkspaceForm } from '~/components/gtm/GtmWorkspaceForm';
 import { Dialog, DialogDescription, DialogRoot, DialogTitle } from '~/components/ui/Dialog';
 import { API_KEYS_UPDATED_EVENT, type ApiKeysUpdatedDetail } from '~/lib/api/apiKeys';
+import { BRAND, providerDisplayName } from '~/lib/brand';
 import { getAll, openDatabase } from '~/lib/persistence/db';
-import type { MCPConfig } from '~/lib/services/mcpService';
-import { useMCPStore } from '~/lib/stores/mcp';
+import { gtmWorkspaceStore, updateGtmWorkspace } from '~/lib/stores/gtmWorkspace';
 import { DEFAULT_AVATARS, DEFAULT_AVATAR, updateProfile } from '~/lib/stores/profile';
 import { setTheme, themeStore } from '~/lib/stores/theme';
 import { THEMES, type Theme } from '~/types/theme';
 import { PROVIDER_LIST } from '~/utils/constants';
 
 const COMPLETED_KEY = 'bolt_onboarding_completed';
-const EMPTY_MCP_CONFIG = { mcpServers: {} };
 
 export function FirstRunOnboarding() {
   const [open, setOpen] = useState(false);
@@ -20,7 +20,7 @@ export function FirstRunOnboarding() {
   const [avatar, setAvatar] = useState<string>(DEFAULT_AVATAR);
   const [providerName, setProviderName] = useState(PROVIDER_LIST[0]?.name ?? '');
   const [apiKey, setApiKey] = useState('');
-  const [mcpText, setMcpText] = useState(JSON.stringify(EMPTY_MCP_CONFIG, null, 2));
+  const [workspace, setWorkspace] = useState(() => gtmWorkspaceStore.get());
   const [selectedTheme, setSelectedTheme] = useState<Theme>(() => themeStore.get());
 
   const [interfaceOptions, setInterfaceOptions] = useState(() => {
@@ -38,12 +38,8 @@ export function FirstRunOnboarding() {
   });
 
   const [error, setError] = useState('');
-  const [saving, setSaving] = useState(false);
 
-  const initializeMcp = useMCPStore((store) => store.initialize);
-  const updateMcpSettings = useMCPStore((store) => store.updateSettings);
-  const mcpInitialized = useMCPStore((store) => store.isInitialized);
-  const stepTitles = useMemo(() => ['Your profile', 'Connect an AI provider', 'MCP servers', 'Appearance'], []);
+  const stepTitles = useMemo(() => ['Your profile', 'Connect an AI provider', 'Your team', 'Appearance'], []);
 
   useEffect(() => {
     let active = true;
@@ -94,12 +90,6 @@ export function FirstRunOnboarding() {
     };
   }, []);
 
-  useEffect(() => {
-    if (open && !mcpInitialized) {
-      void initializeMcp();
-    }
-  }, [open, mcpInitialized, initializeMcp]);
-
   const finish = () => {
     localStorage.setItem(COMPLETED_KEY, 'true');
     setOpen(false);
@@ -139,24 +129,7 @@ export function FirstRunOnboarding() {
     }
 
     if (step === 2) {
-      try {
-        const config = JSON.parse(mcpText) as MCPConfig;
-
-        if (!config || typeof config.mcpServers !== 'object' || config.mcpServers === null) {
-          throw new Error('Configuration must include an mcpServers object.');
-        }
-
-        setSaving(true);
-
-        const currentSettings = useMCPStore.getState().settings;
-        await updateMcpSettings({ ...currentSettings, mcpConfig: config });
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Could not save MCP configuration.');
-        setSaving(false);
-
-        return;
-      }
-      setSaving(false);
+      updateGtmWorkspace({ role: workspace.role, crm: workspace.crm });
     }
 
     if (step === 3) {
@@ -208,7 +181,7 @@ export function FirstRunOnboarding() {
               />
             ))}
           </div>
-          <DialogTitle className="text-xl font-semibold">Welcome to Bolt</DialogTitle>
+          <DialogTitle className="text-xl font-semibold">Welcome to {BRAND.name}</DialogTitle>
           <DialogDescription className="mt-1 text-sm !text-[#a09baa]">
             Let’s get your workspace ready. Optional details can be left blank and changed later in Settings.
           </DialogDescription>
@@ -315,7 +288,7 @@ export function FirstRunOnboarding() {
             >
               {PROVIDER_LIST.map((provider) => (
                 <option key={provider.name} value={provider.name}>
-                  {provider.name}
+                  {providerDisplayName(provider.name)}
                 </option>
               ))}
             </select>
@@ -337,24 +310,15 @@ export function FirstRunOnboarding() {
         {step === 2 && (
           <div className="space-y-3">
             <p className="text-sm text-[#a09baa]">
-              Add MCP server configuration as JSON. You can leave this empty and set it up later in Settings.
+              Pick your role and CRM so examples and the apps you build fit your team. You can add more in Settings.
             </p>
-            <label className="block text-sm font-medium" htmlFor="onboarding-mcp">
-              MCP configuration
-            </label>
-            <textarea
-              id="onboarding-mcp"
-              spellCheck={false}
-              value={mcpText}
-              onChange={(event) => setMcpText(event.target.value)}
-              rows={9}
-              className="w-full resize-y rounded-md border border-[#302e39] bg-[#121116] px-3 py-2 font-mono text-xs text-[#f4f1fa] outline-none focus:border-[#8b5cf6]"
+            <GtmWorkspaceForm
+              variant="compact"
+              tone="onboarding"
+              value={workspace}
+              onChange={(updates) => setWorkspace((current) => ({ ...current, ...updates }))}
             />
-            {error && (
-              <p role="alert" className="text-sm text-red-500">
-                {error}
-              </p>
-            )}
+            <p className="text-sm text-[#a09baa]">Connect data tools later in Settings → Data connectors.</p>
           </div>
         )}
 
@@ -456,11 +420,10 @@ export function FirstRunOnboarding() {
             )}
             <button
               type="button"
-              disabled={saving}
               onClick={() => void next()}
               className="rounded-md bg-[#8b5cf6] px-4 py-2 text-sm font-medium text-white hover:bg-[#9a6bff] disabled:opacity-60"
             >
-              {saving ? 'Saving…' : step === 3 ? 'Finish setup' : 'Continue'}
+              {step === 3 ? 'Finish setup' : 'Continue'}
             </button>
           </div>
         </div>

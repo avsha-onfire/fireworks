@@ -461,7 +461,9 @@ export function DataTab() {
                   Export All Settings
                 </CardTitle>
               </div>
-              <CardDescription>Export all your settings to a JSON file.</CardDescription>
+              <CardDescription>
+                Export all your settings to a JSON file. The file includes your API keys and connector keys.
+              </CardDescription>
             </CardHeader>
             <CardFooter>
               <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} className="w-full">

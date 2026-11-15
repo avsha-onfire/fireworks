@@ -1,10 +1,16 @@
 import ignore from 'ignore';
 import { STARTER_TEMPLATES } from './constants';
 import { createCommandActionsString, detectProjectCommands } from './projectCommands';
+import {
+  DEFAULT_STARTER_TEMPLATE,
+  deriveChatTitle,
+  normalizeStarterMessage,
+  starterPreamble,
+} from '~/lib/gtm/starter-selection';
 import type { ProviderInfo } from '~/types/model';
 
 export const selectStarterTemplate = async (options: { message: string; model?: string; provider?: ProviderInfo }) => {
-  const { message } = options;
+  const message = normalizeStarterMessage(options.message);
 
   // Information requests can use research tools in Build mode without initializing a project.
   const informationRequest =
@@ -15,7 +21,7 @@ export const selectStarterTemplate = async (options: { message: string; model?: 
   const buildRequest = /\b(?:build|create|implement|develop|design|code|make|add)\b/i.test(message);
 
   if (informationRequest && !buildRequest) {
-    return { template: 'blank', title: message.trim().slice(0, 100) };
+    return { template: 'blank', title: deriveChatTitle(options.message) };
   }
 
   const requestedFrameworks: [RegExp, string][] = [
@@ -35,14 +41,14 @@ export const selectStarterTemplate = async (options: { message: string; model?: 
   const requestedTemplate = requestedFrameworks.find(([pattern]) => pattern.test(message));
 
   if (requestedTemplate) {
-    return { template: requestedTemplate[1], title: message.trim().slice(0, 100) };
+    return { template: requestedTemplate[1], title: deriveChatTitle(options.message) };
   }
 
   const simpleTask = /\b(script|snippet|one[- ]off|quick calculation|simple command)\b/i.test(message);
 
   return {
-    template: simpleTask ? 'blank' : 'Vite React',
-    title: message.trim().slice(0, 100) || 'Untitled Project',
+    template: simpleTask ? 'blank' : DEFAULT_STARTER_TEMPLATE,
+    title: deriveChatTitle(options.message),
   };
 };
 
@@ -125,7 +131,7 @@ export async function getTemplates(templateName: string, title?: string, signal?
   }
 
   const assistantMessage = `
-Bolt is initializing your project with the required files using the ${template.name} template.
+${starterPreamble(template.name)}
 <boltArtifact id="imported-files" title="${title || 'Create initial files'}" type="bundled">
 ${filesToImport.files
   .map(

@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { selectFreeModel } from './helpers/model-selection';
+import { BRAND } from '../app/lib/brand';
 
 /**
  * E2E Test Suite 1: Basic Chat Functionality
@@ -31,7 +32,7 @@ test.describe('Basic Chat Functionality', () => {
     
     // If intro exists, check for the tagline
     if (introExists > 0) {
-      await expect(page.locator('text=Where ideas begin')).toBeVisible({ timeout: 5000 });
+      await expect(page.locator(`text=${BRAND.headline}`)).toBeVisible({ timeout: 5000 });
     }
   });
 

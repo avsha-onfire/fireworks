@@ -11,6 +11,7 @@ import {
   List,
   Plug,
   Blocks,
+  Target,
 } from 'lucide-react';
 import type { TabType } from './types';
 
@@ -52,6 +53,7 @@ const SupabaseIcon = () => (
 );
 
 export const TAB_ICONS: Record<TabType, React.ComponentType<{ className?: string }>> = {
+  'gtm-workspace': Target,
   profile: User,
   settings: Settings,
   notifications: Bell,
@@ -71,6 +73,7 @@ export const TAB_ICONS: Record<TabType, React.ComponentType<{ className?: string
 };
 
 export const TAB_LABELS: Record<TabType, string> = {
+  'gtm-workspace': 'GTM Workspace',
   profile: 'Profile',
   settings: 'Preferences',
   notifications: 'Notifications',
@@ -85,11 +88,12 @@ export const TAB_LABELS: Record<TabType, string> = {
   vercel: 'Vercel',
   supabase: 'Supabase',
   'event-logs': 'Event Logs',
-  mcp: 'MCP Servers',
+  mcp: 'Data connectors (MCP)',
   plugins: 'Plugins',
 };
 
 export const TAB_DESCRIPTIONS: Record<TabType, string> = {
+  'gtm-workspace': 'Tell the builder about your role, CRM, deal stages and customers',
   profile: 'Manage your profile and account settings',
   settings: 'Customize application settings and preferences',
   notifications: 'View and manage your notifications',
@@ -104,12 +108,13 @@ export const TAB_DESCRIPTIONS: Record<TabType, string> = {
   vercel: 'Manage Vercel projects and deployments',
   supabase: 'Setup Supabase database connection',
   'event-logs': 'View system events and logs',
-  mcp: 'Configure MCP (Model Context Protocol) servers',
+  mcp: 'Connect CRM, data and workspace tools the builder can read while it builds',
   plugins: 'Discover, install, and manage plugins',
 };
 
 export const DEFAULT_TAB_CONFIG = [
   // User Window Tabs (Always visible by default)
+  { id: 'gtm-workspace', visible: true, window: 'user' as const, order: -1 },
   { id: 'settings', visible: true, window: 'user' as const, order: 0 },
   { id: 'features', visible: true, window: 'user' as const, order: 1 },
   { id: 'data', visible: true, window: 'user' as const, order: 2 },

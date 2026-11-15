@@ -5,6 +5,7 @@
  */
 
 import { useEffect, useState } from 'react';
+import { BRAND } from '~/lib/brand';
 import { FrameRateMonitor } from '~/utils/frame-rate-monitor';
 import { PerformanceMonitor } from '~/utils/performance-monitor';
 
@@ -66,7 +67,7 @@ export function PerformanceDashboard({ onClose }: { onClose?: () => void }) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `bolt-performance-${Date.now()}.json`;
+    a.download = `${BRAND.fileSlug}-performance-${Date.now()}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };

@@ -3,6 +3,7 @@ import { withAgentStreamDeadlines, withAgentToolCallRecovery } from './agent-str
 import { MAX_TOKENS, PROVIDER_COMPLETION_LIMITS, isReasoningModel, type FileMap } from './constants';
 import { prepareModelMessages } from './model-messages';
 import { withDevelopmentCommentaryWorkstyle } from './prompt-workstyle';
+import { collapseStarterBoilerplate } from './starter-context';
 import { createFilesContext, extractPropertiesFromMessage } from './utils';
 import { PromptLibrary } from '~/lib/common/prompt-library';
 import { discussPrompt } from '~/lib/common/prompts/discuss-prompt';
@@ -67,6 +68,7 @@ function sanitizeText(text: string): string {
   let sanitized = text.replace(/<div class=\\"__boltThought__\\">.*?<\/div>/s, '');
   sanitized = sanitized.replace(/<think>.*?<\/think>/s, '');
   sanitized = sanitized.replace(/<boltAction type="file" filePath="package-lock\.json">[\s\S]*?<\/boltAction>/g, '');
+  sanitized = collapseStarterBoilerplate(sanitized);
 
   return sanitized.trim();
 }

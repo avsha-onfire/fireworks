@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from './Button';
+import { DesignSchemePresetRow } from './DesignSchemePresetRow';
 import { Dialog, DialogTitle, DialogDescription, DialogRoot } from './Dialog';
 import { IconButton } from './IconButton';
 import type { DesignScheme } from '~/types/design-scheme';
@@ -57,6 +58,12 @@ export const ColorSchemeDialog: React.FC<ColorSchemeDialogProps> = ({ setDesignS
     setPalette(defaultDesignScheme.palette);
     setFeatures(defaultDesignScheme.features);
     setFont(defaultDesignScheme.font);
+  };
+
+  const handlePresetSelect = (preset: DesignScheme) => {
+    setPalette(preset.palette);
+    setFeatures(preset.features);
+    setFont(preset.font);
   };
 
   const renderColorSection = () => (
@@ -313,6 +320,7 @@ export const ColorSchemeDialog: React.FC<ColorSchemeDialogProps> = ({ setDesignS
 
             {/* Content Area */}
             <div className=" min-h-92 overflow-y-auto">
+              <DesignSchemePresetRow scheme={{ palette, features, font }} onSelect={handlePresetSelect} />
               {activeSection === 'colors' && renderColorSection()}
               {activeSection === 'typography' && renderTypographySection()}
               {activeSection === 'features' && renderFeaturesSection()}

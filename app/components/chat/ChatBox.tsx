@@ -17,6 +17,9 @@ import { ColorSchemeDialog } from '~/components/ui/ColorSchemeDialog';
 import { IconButton } from '~/components/ui/IconButton';
 import { ExpoQrModal } from '~/components/workbench/ExpoQrModal';
 import type { ElementInfo } from '~/components/workbench/Inspector';
+import { BRAND } from '~/lib/brand';
+import { handleDataFile } from '~/lib/gtm/data-file-attach';
+import type { ComposerInputSetter } from '~/lib/gtm/types';
 import { isGitHubConnected } from '~/lib/stores/githubConnection';
 import { isGitLabConnected } from '~/lib/stores/gitlabConnection';
 import { useMCPStore, type ConnectorId } from '~/lib/stores/mcp';
@@ -42,6 +45,7 @@ interface ChatBoxProps {
   imageDataList: string[];
   textareaRef: React.RefObject<HTMLTextAreaElement | null> | undefined;
   input: string;
+  setInput?: ComposerInputSetter;
   handlePaste: (e: React.ClipboardEvent) => void;
   TEXTAREA_MIN_HEIGHT: number;
   TEXTAREA_MAX_HEIGHT: number;
@@ -287,6 +291,10 @@ export const ChatBox: React.FC<ChatBoxProps> = (props) => {
 
             const files = Array.from(e.dataTransfer.files);
             files.forEach((file) => {
+              if (handleDataFile(file, props.setInput)) {
+                return;
+              }
+
               if (file.type.startsWith('image/')) {
                 const reader = new FileReader();
 
@@ -329,7 +337,7 @@ export const ChatBox: React.FC<ChatBoxProps> = (props) => {
             minHeight: props.TEXTAREA_MIN_HEIGHT,
             maxHeight: props.TEXTAREA_MAX_HEIGHT,
           }}
-          placeholder={props.chatMode === 'build' ? 'How can Bolt help you today?' : 'What would you like to discuss?'}
+          placeholder={props.chatMode === 'build' ? BRAND.composerPlaceholder : 'What would you like to discuss?'}
           translate="no"
         />
         <ClientOnly>
@@ -356,7 +364,7 @@ export const ChatBox: React.FC<ChatBoxProps> = (props) => {
             <ClientOnly>
               {() => (
                 <AttachmentMenu
-                  onAttachFile={() => props.handleFileUpload()} // Opens image file picker (image/* only)
+                  onAttachFile={() => props.handleFileUpload()} // Opens file picker (images, .csv, .tsv, .json)
                   onOpenDesignDialog={() => {
                     /*
                      * Trigger the design dialog by programmatically clicking the hidden button

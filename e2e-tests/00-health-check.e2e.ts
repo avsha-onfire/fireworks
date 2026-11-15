@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { BRAND } from '../app/lib/brand';
 
 /**
  * E2E Test Suite 0: Health Check
@@ -8,7 +9,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Health Check', () => {
   test('app loads successfully', async ({ page }) => {
     await page.goto('/');
-    await expect(page).toHaveTitle(/Bolt/i);
+    await expect(page).toHaveTitle(new RegExp(BRAND.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'));
   });
 
   test('no console errors on load', async ({ page }) => {
