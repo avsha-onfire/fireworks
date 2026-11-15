@@ -1,4 +1,5 @@
 import type { ActionFunctionArgs } from 'react-router';
+import { getSessionServerTools } from '~/lib/.server/mcp-oauth/session-servers';
 import { withSecurity } from '~/lib/security';
 import { redactMcpServerTools } from '~/lib/services/mcpRedaction';
 import { MCPService, type MCPConfig } from '~/lib/services/mcpService';
@@ -16,7 +17,7 @@ function isJsonRequest(request: Request) {
   return mediaType === 'application/json';
 }
 
-async function mcpUpdateConfigAction({ request }: ActionFunctionArgs) {
+async function mcpUpdateConfigAction({ request, context }: ActionFunctionArgs) {
   /*
    * A browser sends form and text/plain POSTs to another origin without a
    * preflight. Requiring JSON keeps a page on another site from replacing this
@@ -35,8 +36,9 @@ async function mcpUpdateConfigAction({ request }: ActionFunctionArgs) {
 
     const mcpService = MCPService.getInstance();
     const serverTools = await mcpService.updateConfig(mcpConfig);
+    const sessionServers = await getSessionServerTools(request, context);
 
-    return Response.json(redactMcpServerTools(serverTools));
+    return Response.json(redactMcpServerTools({ ...serverTools, ...sessionServers }));
   } catch (error) {
     logger.error('Error updating MCP config:', error);
     return Response.json({ error: 'Failed to update MCP config' }, { status: 500 });

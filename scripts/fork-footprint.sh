@@ -35,6 +35,8 @@ app/components/ui/BrandLogo.
 app/components/ui/DesignSchemePresetRow.
 app/lib/.server/llm/prompt-gtm.
 app/lib/.server/llm/starter-context.
+app/lib/.server/mcp-oauth/
+app/routes/api.mcp-oauth.
 app/lib/hooks/useGtmWorkspace.
 app/lib/stores/gtmWorkspace.
 app/lib/services/mcpRedaction.

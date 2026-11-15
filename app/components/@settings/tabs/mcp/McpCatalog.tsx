@@ -1,6 +1,13 @@
 import { useState, type FormEvent } from 'react';
 import { toast } from 'react-toastify';
-import { Badge } from '~/components/ui/Badge';
+import {
+  AccessBadge,
+  DocsLink,
+  INPUT_CLASS,
+  PRIMARY_BUTTON_CLASS,
+  SECONDARY_BUTTON_CLASS,
+} from '~/components/gtm/ConnectorParts';
+import ConnectorSignIn from '~/components/gtm/ConnectorSignIn';
 import { Dialog, DialogDescription, DialogRoot, DialogTitle } from '~/components/ui/Dialog';
 import { BRAND } from '~/lib/brand';
 import {
@@ -14,48 +21,23 @@ import {
   getGtmConnectorCategoryLabel,
   getOAuthWorkaround,
   isOAuthConnector,
+  isSignInConnector,
   isTokenConnector,
-  type GtmConnector,
-  type GtmConnectorAccess,
   type GtmConnectorField,
+  type GtmOAuthConnector,
   type GtmTokenConnector,
 } from '~/lib/gtm/connectors';
 import { useMCPStore } from '~/lib/stores/mcp';
 import { classNames } from '~/utils/classNames';
 
 const TOKEN_CONNECTORS = GTM_CONNECTORS.filter(isTokenConnector);
-const OAUTH_CONNECTORS = GTM_CONNECTORS.filter(isOAuthConnector);
+
+/** Sign-in vendors this build cannot connect yet; the ones it can are in `ConnectorSignIn`. */
+const OAUTH_CONNECTORS = GTM_CONNECTORS.filter(
+  (connector): connector is GtmOAuthConnector => isOAuthConnector(connector) && !isSignInConnector(connector),
+);
 
 const KEY_NOTICE = `Connector keys are saved unencrypted in this browser and are included in settings exports. They are sent to this ${BRAND.name} server, which keeps them in memory to call the vendor. This server has no user accounts: anyone who can open it can use the connectors configured on it and replace them. Add keys only on a server that you alone use, and use read-only, least-privilege keys.`;
-
-const ACCESS_BADGES: Record<GtmConnectorAccess, { label: string; variant: 'success' | 'warning' }> = {
-  'read-only': { label: 'Read-only', variant: 'success' },
-  'read-write': { label: 'May read and write', variant: 'warning' },
-};
-
-const INPUT_CLASS =
-  'mt-1.5 w-full rounded-md border border-bolt-elements-borderColor bg-bolt-elements-background-depth-1 px-3 py-2 text-sm text-bolt-elements-textPrimary outline-none focus:border-bolt-elements-borderColorActive focus-visible:ring-2 focus-visible:ring-bolt-elements-borderColorActive';
-
-const SECONDARY_BUTTON_CLASS =
-  'rounded-md border border-bolt-elements-borderColor bg-bolt-elements-background-depth-3 px-3 py-1.5 text-sm font-medium text-bolt-elements-textPrimary transition-colors hover:border-bolt-elements-borderColorActive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bolt-elements-borderColorActive disabled:cursor-not-allowed disabled:opacity-50';
-
-const PRIMARY_BUTTON_CLASS =
-  'rounded-md bg-bolt-elements-item-backgroundAccent px-3 py-1.5 text-sm font-medium text-bolt-elements-item-contentAccent transition-colors hover:bg-bolt-elements-item-backgroundActive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bolt-elements-borderColorActive disabled:cursor-not-allowed disabled:opacity-50';
-
-function DocsLink({ connector }: { connector: GtmConnector }) {
-  return (
-    <a
-      href={connector.docsUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="inline-flex items-center gap-1 text-xs text-bolt-elements-messages-linkColor hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bolt-elements-borderColorActive"
-    >
-      {connector.vendor} documentation
-      <span className="i-ph:arrow-square-out h-3.5 w-3.5" aria-hidden="true" />
-      <span className="sr-only">(opens in a new tab)</span>
-    </a>
-  );
-}
 
 function initialValues(fields: GtmConnectorField[]): Record<string, string> {
   return Object.fromEntries(fields.map((field) => [field.key, field.options?.[0]?.value ?? '']));
@@ -267,7 +249,6 @@ export default function McpCatalog({ hasUnsavedEdits = false, onDiscardEdits }: 
         <ul className="space-y-2">
           {TOKEN_CONNECTORS.map((connector) => {
             const state = getGtmConnectorState(connector.id, settings, serverTools);
-            const badge = ACCESS_BADGES[connector.access];
 
             return (
               <li
@@ -277,9 +258,7 @@ export default function McpCatalog({ hasUnsavedEdits = false, onDiscardEdits }: 
                 <div className="min-w-0 flex-1 basis-64">
                   <div className="flex flex-wrap items-center gap-2">
                     <h4 className="text-sm font-semibold text-bolt-elements-textPrimary">{connector.name}</h4>
-                    <Badge variant={badge.variant} size="sm">
-                      {badge.label}
-                    </Badge>
+                    <AccessBadge access={connector.access} />
                   </div>
                   <p className="text-xs text-bolt-elements-textTertiary">
                     {connector.vendor} · {getGtmConnectorCategoryLabel(connector.category)}
@@ -321,6 +300,8 @@ export default function McpCatalog({ hasUnsavedEdits = false, onDiscardEdits }: 
           })}
         </ul>
       </div>
+
+      <ConnectorSignIn />
 
       <div aria-labelledby="gtm-connectors-oauth-heading" role="group" className="space-y-3">
         <h3 id="gtm-connectors-oauth-heading" className="text-sm font-medium text-bolt-elements-textPrimary">

@@ -19,11 +19,27 @@ vi.mock('~/lib/stores/mcp', () => ({
 }));
 
 import McpCatalog, { type McpCatalogProps } from './McpCatalog';
+import { SIGN_IN_NOTICE } from '~/components/gtm/ConnectorSignIn';
 import { BRAND } from '~/lib/brand';
-import { GTM_CONNECTORS, getOAuthWorkaround, isOAuthConnector, isTokenConnector } from '~/lib/gtm/connectors';
+import {
+  GTM_CONNECTORS,
+  GTM_SIGN_IN_CONNECTORS,
+  getOAuthWorkaround,
+  isOAuthConnector,
+  isSignInConnector,
+  isTokenConnector,
+} from '~/lib/gtm/connectors';
 
 const tokenConnectors = GTM_CONNECTORS.filter(isTokenConnector);
-const oauthConnectors = GTM_CONNECTORS.filter(isOAuthConnector);
+const oauthConnectors = GTM_CONNECTORS.filter(isOAuthConnector).filter((connector) => !isSignInConnector(connector));
+
+/** The catalog's three groups: key entries, sign-in entries, and vendors listed for reference. */
+function sections(markup: string) {
+  const [works, rest] = markup.split('>Sign in with the vendor</h3>');
+  const [signIn, needsSignIn] = rest.split('Needs vendor sign-in (not available yet)');
+
+  return { works, signIn, needsSignIn };
+}
 
 /** Static markup escapes text; undo it for the characters used in catalog copy. */
 function render(props: McpCatalogProps = {}): string {
@@ -76,7 +92,10 @@ describe('McpCatalog', () => {
   });
 
   it('uses only theme colour classes that the style configuration generates', async () => {
-    const source = readFileSync(new URL('./McpCatalog.tsx', import.meta.url), 'utf8');
+    const source = ['./McpCatalog.tsx', '../../../gtm/ConnectorParts.tsx', '../../../gtm/ConnectorSignIn.tsx']
+      .map((path) => readFileSync(new URL(path, import.meta.url), 'utf8'))
+      .join('\n');
+
     const themeClasses = [...new Set(source.match(/[\w:-]*bolt-elements-[\w-]+/g))];
     const unoConfig: { default: UserConfig } = await import(new URL('uno.config.ts', ROOT).href);
     const generator = await createGenerator(unoConfig.default);
@@ -88,7 +107,7 @@ describe('McpCatalog', () => {
 
   it('offers every token connector with its access level, description and documentation', () => {
     const markup = render();
-    const [works, needsSignIn] = markup.split('Needs vendor sign-in (not available yet)');
+    const { works, needsSignIn } = sections(markup);
 
     expect(works).toContain('>Works today</h3>');
     expect(needsSignIn).toBeDefined();
@@ -106,8 +125,10 @@ describe('McpCatalog', () => {
     expect(markup).not.toContain('type="password"');
   });
 
-  it('lists sign-in-only vendors with a workaround and no way to add them', () => {
-    const [, needsSignIn] = render().split('Needs vendor sign-in (not available yet)');
+  it('lists sign-in-only vendors it cannot connect yet with a workaround and no way to add them', () => {
+    const { needsSignIn } = sections(render());
+
+    expect(oauthConnectors).toHaveLength(13);
 
     for (const connector of oauthConnectors) {
       expect(needsSignIn).toContain(connector.name);
@@ -115,7 +136,31 @@ describe('McpCatalog', () => {
       expect(needsSignIn).toContain(getOAuthWorkaround(connector));
     }
 
+    for (const connector of GTM_SIGN_IN_CONNECTORS) {
+      expect(needsSignIn).not.toContain(connector.name);
+    }
+
     expect(needsSignIn).not.toContain('<button');
+  });
+
+  it('offers HubSpot and Salesforce sign-in with access, note, documentation and storage notice', () => {
+    const { signIn } = sections(render());
+
+    expect(GTM_SIGN_IN_CONNECTORS.map((connector) => connector.vendor)).toEqual(['Salesforce', 'HubSpot']);
+    expect(signIn).toContain(SIGN_IN_NOTICE);
+
+    for (const connector of GTM_SIGN_IN_CONNECTORS) {
+      expect(signIn).toContain(`>${connector.name}</h4>`);
+      expect(signIn).toContain(connector.signIn.note);
+      expect(signIn).toContain(`href="${connector.docsUrl}"`);
+    }
+
+    expect(count(signIn, '>Read-only<')).toBe(1);
+    expect(count(signIn, '>May read and write<')).toBe(1);
+
+    // Until this browser's status loads there is nothing to click.
+    expect(count(signIn, 'Checking sign-in…')).toBe(GTM_SIGN_IN_CONNECTORS.length);
+    expect(signIn).not.toContain('<button');
   });
 
   it('opens documentation in a new tab without handing over the opener', () => {

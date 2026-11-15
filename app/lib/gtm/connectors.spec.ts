@@ -4,9 +4,13 @@ import {
   GTM_CONNECTORS,
   GTM_CONNECTOR_CATEGORIES,
   GTM_CONNECTOR_ID_PREFIX,
+  GTM_SIGN_IN_CONNECTORS,
   getGtmConnectorCategoryLabel,
   getOAuthWorkaround,
+  getSignInConnector,
+  getSignInVariant,
   isOAuthConnector,
+  isSignInConnector,
   isTokenConnector,
   type GtmTokenConnector,
 } from './connectors';
@@ -14,6 +18,87 @@ import { mcpServerConfigSchema } from '~/lib/services/mcpService';
 
 const tokenConnectors = GTM_CONNECTORS.filter(isTokenConnector);
 const oauthConnectors = GTM_CONNECTORS.filter(isOAuthConnector);
+
+/** The documented sign-in for each vendor, written out independently of the catalog. */
+const SIGN_IN_RECIPES = {
+  'gtm-hubspot': {
+    access: 'read-write',
+    scopes: undefined,
+    clientSecretRequired: true,
+    env: ['HUBSPOT_MCP_CLIENT_ID', 'HUBSPOT_MCP_CLIENT_SECRET'],
+    variants: [['default', 'https://mcp.hubspot.com', 'https://mcp.hubspot.com']],
+  },
+  'gtm-salesforce': {
+    access: 'read-only',
+    scopes: ['mcp_api', 'refresh_token'],
+    clientSecretRequired: false,
+    env: ['SALESFORCE_MCP_CLIENT_ID', 'SALESFORCE_MCP_CLIENT_SECRET'],
+    variants: [
+      [
+        'production',
+        'https://api.salesforce.com/platform/mcp/v1/platform/sobject-reads',
+        'https://login.salesforce.com',
+      ],
+      [
+        'sandbox',
+        'https://api.salesforce.com/platform/mcp/v1/sandbox/platform/sobject-reads',
+        'https://test.salesforce.com',
+      ],
+    ],
+  },
+};
+
+describe('GTM sign-in connectors', () => {
+  it('connects HubSpot and Salesforce, as their documentation describes', () => {
+    expect(GTM_SIGN_IN_CONNECTORS.map((connector) => connector.id).sort()).toEqual(Object.keys(SIGN_IN_RECIPES).sort());
+
+    for (const connector of GTM_SIGN_IN_CONNECTORS) {
+      const recipe = SIGN_IN_RECIPES[connector.id as keyof typeof SIGN_IN_RECIPES];
+
+      expect(connector.signIn.access).toBe(recipe.access);
+      expect(connector.signIn.scopes).toEqual(recipe.scopes);
+      expect(connector.signIn.clientSecretRequired).toBe(recipe.clientSecretRequired);
+      expect([connector.signIn.clientIdEnv, connector.signIn.clientSecretEnv]).toEqual(recipe.env);
+      expect(
+        connector.signIn.variants.map((variant) => [variant.value, variant.serverUrl, variant.authorizationServer]),
+      ).toEqual(recipe.variants);
+      expect(connector.signIn.note.trim()).not.toBe('');
+      expect(connector.signIn.setup).toContain(connector.signIn.clientIdEnv);
+    }
+  });
+
+  it('reads Salesforce only through the read-only SObject Reads server', () => {
+    const salesforce = getSignInConnector('gtm-salesforce')!;
+
+    for (const variant of salesforce.signIn.variants) {
+      expect(variant.serverUrl.endsWith('/platform/sobject-reads')).toBe(true);
+    }
+
+    expect(salesforce.docsUrl).toContain('sobject-reads');
+  });
+
+  it('keeps app credentials out of variables that Vite sends to the browser', () => {
+    for (const connector of GTM_SIGN_IN_CONNECTORS) {
+      for (const name of [connector.signIn.clientIdEnv, connector.signIn.clientSecretEnv]) {
+        expect(name).toMatch(/^[A-Z][A-Z0-9_]*$/);
+        expect(name.startsWith('VITE_')).toBe(false);
+      }
+    }
+  });
+
+  it('finds connectors and environments by id, and nothing else', () => {
+    const salesforce = getSignInConnector('gtm-salesforce')!;
+
+    expect(isSignInConnector(salesforce)).toBe(true);
+    expect(getSignInConnector('gtm-pipedrive')).toBeUndefined();
+    expect(getSignInConnector('gtm-linear')).toBeUndefined();
+    expect(getSignInConnector({ id: 'gtm-hubspot' })).toBeUndefined();
+    expect(getSignInVariant(salesforce)?.value).toBe('production');
+    expect(getSignInVariant(salesforce, 'sandbox')?.value).toBe('sandbox');
+    expect(getSignInVariant(salesforce, 'eu')).toBeUndefined();
+    expect(getSignInVariant(salesforce, null)).toBeUndefined();
+  });
+});
 
 const base64 = (text: string) => Buffer.from(text, 'utf8').toString('base64');
 

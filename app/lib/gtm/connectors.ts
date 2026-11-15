@@ -3,11 +3,12 @@ import type { MCPServerConfig } from '~/lib/services/mcpService';
 /*
  * Catalog of vendor-hosted MCP servers for go-to-market tools.
  *
- * The MCP client can only send static headers, so one-click entries exist only
- * for servers whose official documentation describes a static token. Every
- * endpoint, header and scope below was taken from the vendor's documentation
- * on the `verifiedOn` date; vendors that only document an interactive sign-in
- * are listed for reference without a way to add them.
+ * Token entries send a static header the vendor documents. Sign-in entries
+ * (`signIn`) connect through the vendor's OAuth flow, run by this server in
+ * app/lib/.server/mcp-oauth. Every endpoint, header and scope below was taken
+ * from the vendor's documentation on the `verifiedOn` date; vendors that only
+ * document an interactive sign-in and have no `signIn` block are listed for
+ * reference without a way to add them.
  */
 
 export type GtmConnectorCategoryId =
@@ -82,13 +83,51 @@ export interface GtmTokenConnector extends GtmConnectorBase {
   note: string;
 }
 
-/** The vendor only documents an interactive sign-in; listed for reference. */
+/** One environment a sign-in entry can reach, such as a Salesforce sandbox. */
+export interface GtmSignInVariant extends GtmConnectorFieldOption {
+  /** MCP server URL from the vendor's documentation. */
+  serverUrl: string;
+
+  /** The authorization server the vendor documents for it. Discovery must name exactly this one. */
+  authorizationServer: string;
+}
+
+/** How a sign-in entry connects. Only entries with this block can be connected. */
+export interface GtmOAuthSignIn {
+  access: GtmConnectorAccess;
+
+  /** Environments to choose from; the first is the default. */
+  variants: GtmSignInVariant[];
+
+  /** Scopes from the vendor's documentation. Left out when the vendor sets them itself. */
+  scopes?: string[];
+
+  /** Server environment variables that hold this deployment's app credentials. */
+  clientIdEnv: string;
+  clientSecretEnv: string;
+
+  /** False when the vendor accepts a client without a secret (PKCE alone). */
+  clientSecretRequired: boolean;
+
+  /** What the connection can do; shown before sign-in. */
+  note: string;
+
+  /** How an administrator registers the app; shown while it is not set up. */
+  setup: string;
+}
+
+/** The vendor only documents an interactive sign-in. */
 export interface GtmOAuthConnector extends GtmConnectorBase {
   auth: 'oauth';
 
   /** How to get the same data into a build today, when a CSV export is not the answer. */
   workaround?: string;
+
+  /** Present when this build can run the vendor's sign-in. */
+  signIn?: GtmOAuthSignIn;
 }
+
+export type GtmSignInConnector = GtmOAuthConnector & { signIn: GtmOAuthSignIn };
 
 export type GtmConnector = GtmTokenConnector | GtmOAuthConnector;
 
@@ -257,9 +296,14 @@ function tokenConnector<K extends string>({ build, ...definition }: TokenConnect
   };
 }
 
-function oauthConnector(definition: Omit<GtmOAuthConnector, 'auth' | 'verifiedOn'>): GtmOAuthConnector {
-  return { ...definition, auth: 'oauth', verifiedOn: VERIFIED_ON };
+function oauthConnector(
+  definition: Omit<GtmOAuthConnector, 'auth' | 'verifiedOn'> & { verifiedOn?: string },
+): GtmOAuthConnector {
+  return { verifiedOn: VERIFIED_ON, ...definition, auth: 'oauth' };
 }
+
+/** Sign-in entries were checked against the docs and the servers' published metadata on this date. */
+const SIGN_IN_VERIFIED_ON = '2026-11-13';
 
 const INTERCOM_REGIONS: RegionEndpoint[] = [
   { value: 'us', label: 'US', url: 'https://mcp.intercom.com/mcp' },
@@ -529,8 +573,35 @@ const OAUTH_CONNECTORS: GtmOAuthConnector[] = [
     name: 'Salesforce Hosted MCP Servers',
     vendor: 'Salesforce',
     category: 'crm',
-    description: 'Accounts, contacts, opportunities and custom objects under your Salesforce permissions.',
-    docsUrl: 'https://developer.salesforce.com/docs/platform/hosted-mcp-servers/references/reference/sobject-all.html',
+    description:
+      'Query and search accounts, contacts, opportunities and custom objects under your Salesforce permissions.',
+    docsUrl:
+      'https://developer.salesforce.com/docs/platform/hosted-mcp-servers/references/reference/sobject-reads.html',
+    verifiedOn: SIGN_IN_VERIFIED_ON,
+    signIn: {
+      access: 'read-only',
+      variants: [
+        {
+          value: 'production',
+          label: 'Production or Developer Edition',
+          serverUrl: 'https://api.salesforce.com/platform/mcp/v1/platform/sobject-reads',
+          authorizationServer: 'https://login.salesforce.com',
+        },
+        {
+          value: 'sandbox',
+          label: 'Sandbox or scratch org',
+          serverUrl: 'https://api.salesforce.com/platform/mcp/v1/sandbox/platform/sobject-reads',
+          authorizationServer: 'https://test.salesforce.com',
+        },
+      ],
+      scopes: ['mcp_api', 'refresh_token'],
+      clientIdEnv: 'SALESFORCE_MCP_CLIENT_ID',
+      clientSecretEnv: 'SALESFORCE_MCP_CLIENT_SECRET',
+      clientSecretRequired: false,
+      note: 'Connects to the SObject Reads server, which can read schema, query, search and follow relationships but cannot create, update or delete records. It works within your Salesforce permissions, field-level security and sharing rules.',
+      setup:
+        'In Salesforce Setup, open External Client App Manager and create an app. Enable OAuth, add the callback URL below, select the mcp_api and refresh_token scopes, require PKCE and issue JWT-based access tokens. Set SALESFORCE_MCP_CLIENT_ID to its consumer key, and SALESFORCE_MCP_CLIENT_SECRET if the app requires a secret, then restart this server. A new app can take up to 30 minutes to work. Orgs that block logins from login.salesforce.com or test.salesforce.com need a My Domain address, which this connector does not support yet.',
+    },
   }),
   oauthConnector({
     id: 'gtm-hubspot',
@@ -540,6 +611,24 @@ const OAUTH_CONNECTORS: GtmOAuthConnector[] = [
     description: 'CRM contacts, companies, deals, tickets and activities under your HubSpot permissions.',
     docsUrl:
       'https://developers.hubspot.com/docs/apps/developer-platform/build-apps/integrate-with-the-remote-hubspot-mcp-server',
+    verifiedOn: SIGN_IN_VERIFIED_ON,
+    signIn: {
+      access: 'read-write',
+      variants: [
+        {
+          value: 'default',
+          label: 'HubSpot',
+          serverUrl: 'https://mcp.hubspot.com',
+          authorizationServer: 'https://mcp.hubspot.com',
+        },
+      ],
+      clientIdEnv: 'HUBSPOT_MCP_CLIENT_ID',
+      clientSecretEnv: 'HUBSPOT_MCP_CLIENT_SECRET',
+      clientSecretRequired: true,
+      note: "HubSpot sets the connection's permissions from its tools and your HubSpot user. There is no read-only option: its tools can also create and update records, properties and pipelines. Every tool call waits for your approval in the chat, and you can turn off tools below once connected.",
+      setup:
+        'In HubSpot, open Development, MCP Connectors and create an MCP connector. Add the callback URL below as a redirect URL. Set HUBSPOT_MCP_CLIENT_ID and HUBSPOT_MCP_CLIENT_SECRET on this server to its client ID and secret, then restart the server.',
+    },
   }),
   oauthConnector({
     id: 'gtm-pipedrive',
@@ -663,6 +752,24 @@ export function isTokenConnector(connector: GtmConnector): connector is GtmToken
 
 export function isOAuthConnector(connector: GtmConnector): connector is GtmOAuthConnector {
   return connector.auth === 'oauth';
+}
+
+export function isSignInConnector(connector: GtmConnector): connector is GtmSignInConnector {
+  return connector.auth === 'oauth' && connector.signIn !== undefined;
+}
+
+/** Entries this build can connect through the vendor's sign-in. */
+export const GTM_SIGN_IN_CONNECTORS: GtmSignInConnector[] = GTM_CONNECTORS.filter(isSignInConnector);
+
+export function getSignInConnector(id: unknown): GtmSignInConnector | undefined {
+  return GTM_SIGN_IN_CONNECTORS.find((connector) => connector.id === id);
+}
+
+/** The named environment, or the default one when `value` is undefined. */
+export function getSignInVariant(connector: GtmSignInConnector, value?: unknown): GtmSignInVariant | undefined {
+  return value === undefined
+    ? connector.signIn.variants[0]
+    : connector.signIn.variants.find((variant) => variant.value === value);
 }
 
 export function getGtmConnectorCategoryLabel(id: GtmConnectorCategoryId): string {
